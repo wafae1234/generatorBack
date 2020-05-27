@@ -25,16 +25,16 @@ public class GeneratorApplication {
 		
 		String appName = "Crud";
 		String packageName = "com.org.server";
-		String directory = "C:\\Eclipse\\workspace\\GeneratedProject";
+		String directory = "C:\\Eclipse\\workspace\\GeneratedProject\\";
 		String host = "localhost:3306"; 
 		String driverName = "com.mysql.cj.jdbc.Driver"; 
 		String username = "root"; 
 		String databaseName = "stock"; 
 		String password = ""; 
 		String prefix = "jdbc:mysql:";
-		String directoryEntity = BaseConstants.MAIN_SRC_DIR;
+		String directoryEntity = directory + BaseConstants.MAIN_SRC_DIR;
 		String packageEntity = packageName+".model"; 
-		String directoryDTO = BaseConstants.MAIN_SRC_DIR;
+		String directoryDTO = directory + BaseConstants.MAIN_SRC_DIR;
 		String packageDTO = packageName+".dto";
 		
 		File projectDirectory = new File(directory);
@@ -60,30 +60,17 @@ public class GeneratorApplication {
 		}
 			
 		
-		
 		EntitiesGenerator generator = new EntitiesGenerator(host, driverName, databaseName, username, password, prefix);
 		
 		generator.generateEntities(directoryEntity,packageEntity,true);
 		generator.generateEntities(directoryDTO,packageDTO,false);
 		
 		RenameToDTO dto = new RenameToDTO();
-		List<String> liens = dto.lister(directoryDTO);
+		List<String> liens = dto.lister(directoryDTO + "com/org/server/dto" );
 		dto.renamFileName(liens);
-	
-	
-		
-		
-        File f = new File("F:\\program\\program1"); 
-  
-        if (f.mkdirs()) { 
-            System.out.println("Directory is created"); 
-        } 
-        else { 
-            System.out.println("Directory cannot be created"); 
-        } 
 		
 
-        
+       /* 
 		String pomPath = directory + "\\pom.xml";
 		try {
 			replaceFileString("Contact", appName, pomPath);
@@ -92,7 +79,7 @@ public class GeneratorApplication {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
+		*/
 	}
 	
 	

@@ -45,7 +45,7 @@ public class RenameToDTO {
 		
 		for(int i=0;i<files.size();i++) {
 			String textfile = files.get(i);
-			String file= textfile.split("DTO")[1];
+			String file= textfile.split("dto")[1];
 	        String filename= file.split("\\.")[0].replace("\\", "");
 	        String pathOldFile= textfile.split("\\.")[0];
 	        
@@ -73,8 +73,8 @@ public class RenameToDTO {
 	private void replacing(String lien , String className) {
 		Map<String,String> variableMap = fillMap(className);
 		String shortLien = "src"+lien.split("src")[1];
-		Path path = Paths.get(shortLien);
-		System.out.println(shortLien);
+		Path path = Paths.get(lien);
+		System.out.println(lien);
 		Stream<String> lines;
 		try {
 			lines = Files.lines(path,Charset.forName("UTF-8"));
