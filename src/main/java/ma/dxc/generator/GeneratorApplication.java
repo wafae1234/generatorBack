@@ -110,27 +110,9 @@ public class GeneratorApplication {
 		
 		
 		
-		File projectDirectory = new File(directory);
-		if (projectDirectory.mkdirs()) { 
-            System.out.println("Directory is created"); 
-        } 
-        else { 
-            System.out.println("Directory cannot be created"); 
-        } 
+		pullBackEndFramework(directory);
 		
-		String repoUrl = "https://github.com/chaalidiae/ServerSideCrudDxc.git";
-		String cloneDirectoryPath = projectDirectory.getPath(); 
-		try {
-		    System.out.println("Cloning "+repoUrl+" into "+cloneDirectoryPath);
-		    Git.cloneRepository()
-		        .setURI(repoUrl)
-		        .setDirectory(Paths.get(cloneDirectoryPath).toFile())
-		        .call();
-		    System.out.println("Completed Cloning");
-		} catch (GitAPIException e) {
-		    System.out.println("Exception occurred while cloning repo");
-		    e.printStackTrace();
-		}
+		
 		/////////////////////////////////////////////////////////////////////////////////////////////
 		EntitiesGenerator generator = new EntitiesGenerator(
 		host, driverName, databaseName+"?serverTimezone=UTC", username, password, prefix);
@@ -213,6 +195,30 @@ public class GeneratorApplication {
 
 		    	System.out.println("Done");
 				
+			}
+	
+			static void pullBackEndFramework(String directory) {
+				File projectDirectory = new File(directory);
+				if (projectDirectory.mkdirs()) { 
+		            System.out.println("Directory is created"); 
+		        } 
+		        else { 
+		            System.out.println("Directory cannot be created"); 
+		        } 
+				
+				String repoUrl = "https://github.com/chaalidiae/ServerSideCrudDxc.git";
+				String cloneDirectoryPath = projectDirectory.getPath(); 
+				try {
+				    System.out.println("Cloning "+repoUrl+" into "+cloneDirectoryPath);
+				    Git.cloneRepository()
+				        .setURI(repoUrl)
+				        .setDirectory(Paths.get(cloneDirectoryPath).toFile())
+				        .call();
+				    System.out.println("Completed Cloning");
+				} catch (GitAPIException e) {
+				    System.out.println("Exception occurred while cloning repo");
+				    e.printStackTrace();
+				}
 			}
 			
 			static void renameProjectMainClass(String pathProject, String newMainClassName) {
