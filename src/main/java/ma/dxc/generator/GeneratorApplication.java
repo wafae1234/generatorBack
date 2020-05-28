@@ -9,9 +9,13 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 
+ 
+
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+ 
 
 import ma.dxc.generator.services.BaseConstants;
 import ma.dxc.generator.services.EntitiesGenerator;
@@ -20,8 +24,12 @@ import ma.dxc.generator.services.RenameToDTO;
 
 @SpringBootApplication
 public class GeneratorApplication {
-
+	 
+	
 	public static void main(String[] args) {
+		
+		//SpringApplication.run(GeneratorApplication.class, args);
+		  
 		
 		String appName = "Crud";
 		String packageName = "com.org.server";
@@ -70,17 +78,7 @@ public class GeneratorApplication {
 		List<String> liens = dto.lister(directoryDTO);
 		dto.renamFileName(liens);
 	
-	
-		
-		
-        File f = new File("F:\\program\\program1"); 
-  
-        if (f.mkdirs()) { 
-            System.out.println("Directory is created"); 
-        } 
-        else { 
-            System.out.println("Directory cannot be created"); 
-        } 
+
 		
 
         
@@ -95,7 +93,6 @@ public class GeneratorApplication {
 		
 	}
 	
-	
 	public static void replaceFileString(String oldString, String newString, String filePath) throws IOException {
 	Path path = Paths.get(filePath);
 	Charset charset = StandardCharsets.UTF_8;
@@ -104,8 +101,8 @@ public class GeneratorApplication {
 	content = content.replaceAll(oldString, newString);
 	Files.write(path, content.getBytes(charset));
 	System.out.println("Finding and replacing done");
-		
-
+	
+	}
 	}
 
-}
+
