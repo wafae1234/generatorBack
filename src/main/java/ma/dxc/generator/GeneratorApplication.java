@@ -48,7 +48,8 @@ public class GeneratorApplication {
 		File projectDirectory = new File(directory);
 		if (projectDirectory.mkdirs()) { 
             System.out.println("Directory is created"); 
-        } 
+        }
+		
         else { 
             System.out.println("Directory cannot be created"); 
         } 
@@ -77,11 +78,7 @@ public class GeneratorApplication {
 		RenameToDTO dto = new RenameToDTO();
 		List<String> liens = dto.lister(directoryDTO);
 		dto.renamFileName(liens);
-	
 
-		
-
-        
 		String pomPath = directory + "\\pom.xml";
 		try {
 			replaceFileString("Contact", appName, pomPath);
