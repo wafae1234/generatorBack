@@ -112,7 +112,7 @@ public class GeneratorApplication {
 		String host = "localhost:3306"; 
 		String driverName = "com.mysql.cj.jdbc.Driver"; 
 		String username = "root"; 
-		String databaseName = "stock"; 
+		String databaseName = "bdgenerateur"; 
 		String password = ""; 
 		String prefix = "jdbc:mysql:";
 		String directoryEntity = directoryBack + BaseConstants.MAIN_SRC_DIR;
@@ -278,7 +278,7 @@ public class GeneratorApplication {
 	static void renameMainRessourceFile(String pathMainResFile,String prefix, String host, String databaseName, String username, String password, String driverName, int port) throws ConfigurationException {
 		String url = prefix + "//" + host + "/" + databaseName;
 		PropertiesConfiguration properties = new PropertiesConfiguration(pathMainResFile);
-		properties.setProperty("spring.datasource.url", url);
+		properties.setProperty("spring.datasource.url", url+"?serverTimezone=UTC");
 		properties.setProperty("spring.datasource.username", "root");
 		properties.setProperty("spring.datasource.password", "");
 		properties.setProperty("spring.datasource.driver-class-name", driverName);
@@ -602,6 +602,7 @@ public class GeneratorApplication {
 			copyFile(packagePath+"ContactAspect.java",packagePath+newClassName+"Aspect.java");
 			modifyFile(packagePath+newClassName+"Aspect.java","Contact",newClassName);
 			modifyFile(packagePath+newClassName+"Aspect.java","contact",newClassName.toLowerCase());
+			modifyFile(packagePath+newClassName+"Aspect.java","CONTACT",newClassName.toUpperCase());
 		}
 		List<String> oldClassNames = listFilesInFolder(packagePath);
 		for (String oldClassName : oldClassNames) {
