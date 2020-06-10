@@ -80,21 +80,5 @@ public class EntitiesGenerator {
         }
 		
 	}
-
-	/*
-	public void generateDTOs() {
-		Options rmOpts = new Options(); 
-		String argString = "-Log DefaultLevel=ERROR -metaDataFactory jpa() -metadata none"; 
-
-		rmOpts.setProperty("directory", "src/model");
-		rmOpts.setProperty("package", "ma.dxc.dto");
-		rmOpts.setProperty("annotations", false);
-		rmOpts.setProperty("useGenericCollections", false);
-		rmOpts.setProperty("primaryKeyOnJoin", false);
-		rmOpts.setProperty("nullableAsObject", true);
-		rmOpts.setFromCmdLine(argString.split(" "));
-
-	}
-	*/
 	
 }
