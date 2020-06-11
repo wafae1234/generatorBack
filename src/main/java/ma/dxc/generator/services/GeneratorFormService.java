@@ -41,8 +41,10 @@ public class GeneratorFormService {
 
 		String newPackage = f.getNompackage().toString();
 		String newPackagePath = newPackage.replace(".","\\")+"\\";
-
-		String directoryBack = "C:\\Eclipse\\workspace\\GeneratedProjectBack";
+		
+		String directory = f.getDiroctoryproject().toString();
+		String directoryBack = directory + "\\backend";
+		
 
 		String newTestPackagePath = newPackagePath + "\\test\\";
 
@@ -107,7 +109,7 @@ public class GeneratorFormService {
 
 		String repoUrlFront = "https://github.com/chaalidiae/frontenddxc.git";
 
-		String directoryFront = directoryBack+"\\front";
+		String directoryFront = directory+"\\front";
 
 		String frontApp = directoryFront+BaseConstants.FRONT_APP;
 
@@ -127,7 +129,7 @@ public class GeneratorFormService {
 		String host = f.getLienserveur(); 
 		String dbType = f.getTypebasededonne().toUpperCase();
 		String username = f.getNomutilisateur(); 
-		String databaseName = f.getnombd(); 
+		String databaseName = f.getNombd(); 
 		String password = f.getMotdepasseutilisateur(); 
 		String prefix = "";
 		String driverName = ""; 
@@ -153,7 +155,7 @@ public class GeneratorFormService {
 		}		
 
 		pullFramework(directoryBack,repoUrlBack);
-		pullFramework(directoryBack+"\\front",repoUrlFront);
+		pullFramework(directoryFront,repoUrlFront);
 
 
 		try {

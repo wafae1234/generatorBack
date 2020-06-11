@@ -1,11 +1,8 @@
 package ma.dxc.generator.model;
 
-import javax.persistence.Entity;
-import javax.persistence.Id;
-
-@Entity
 public class GeneratorForm {
-	@Id
+	
+	private String diroctoryproject;
 	private String nomprojet;
 	private String nompackage;
 	private String port;
@@ -14,7 +11,20 @@ public class GeneratorForm {
 	private String nombd;
 	private String nomutilisateur;
 	private String motdepasseutilisateur;
+
 	
+	public String getDiroctoryproject() {
+		return diroctoryproject;
+	}
+	public void setDiroctoryproject(String diroctoryproject) {
+		this.diroctoryproject = diroctoryproject;
+	}
+	public String getNombd() {
+		return nombd;
+	}
+	public void setNombd(String nombd) {
+		this.nombd = nombd;
+	}
 	public String getNomprojet() {
 		return nomprojet;
 	}
@@ -46,12 +56,7 @@ public class GeneratorForm {
 	public void setLienserveur(String lienserveur) {
 		this.lienserveur = lienserveur;
 	}
-	public String getnombd() {
-		return nombd;
-	}
-	public void setnombd(String nombd) {
-		this.nombd = nombd;
-	}
+
 	public String getNomutilisateur() {
 		return nomutilisateur;
 	}
