@@ -39,10 +39,10 @@ public class GeneratorFormService {
 	public void generate(GeneratorForm f) {
 
 
-		String newPackage = f.getNompackage().toString();
+		String newPackage = f.getNompackage();
 		String newPackagePath = newPackage.replace(".","\\")+"\\";
 		
-		String directory = f.getDiroctoryproject().toString();
+		String directory = f.getDiroctoryproject();
 		String directoryBack = directory + "\\backend";
 		
 
