@@ -1,5 +1,6 @@
 package ma.dxc.generator.services;
 
+import java.beans.IntrospectionException;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -12,11 +13,18 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -25,13 +33,22 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import javax.tools.Diagnostic;
+import javax.tools.DiagnosticCollector;
+import javax.tools.JavaCompiler;
+import javax.tools.JavaFileObject;
+import javax.tools.StandardJavaFileManager;
+import javax.tools.ToolProvider;
+
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.commons.io.FileUtils;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.stereotype.Service;
-import ma.dxc.generator.model.GeneratorForm;
+
+import ma.dxc.model.GeneratorForm;
 
 @Service
 public class GeneratorFormService {
@@ -39,13 +56,13 @@ public class GeneratorFormService {
 	public void generate(GeneratorForm f) {
 
 
-		String newPackage = f.getNompackage();
+		String newPackage = f.getNompackage().toString();
 		String newPackagePath = newPackage.replace(".","\\")+"\\";
 		
-		String directory = f.getDiroctoryproject();
+		String directory = f.getDiroctoryproject().toString();
 		String directoryBack = directory + "\\backend";
 		
-
+		String newSrcPackagePath = newPackagePath + "\\src\\";
 		String newTestPackagePath = newPackagePath + "\\test\\";
 
 		String NewProjectName = f.getNomprojet();
@@ -120,6 +137,8 @@ public class GeneratorFormService {
 		String frontAssetsI18n = directoryFront+BaseConstants.FRONT_ASSETS_I18N;
 
 		String frontSideBar = directoryFront+BaseConstants.FRONT_SIDE_BAR;
+		
+		String frontNavBar = directoryFront+BaseConstants.FRONT_NAV_BAR;
 
 		String frontIndex = directoryFront+BaseConstants.FRONT_INDEX;
 
@@ -197,8 +216,7 @@ public class GeneratorFormService {
 
 		moveProjectToNewRep(pathTestProject,newTestPathProject);
 
-		List<String> classs =new ArrayList<String>();
-		classs = ListNameOfFilesinDirectory(orginPathProjectMain+"model");
+		List<String> classs = ListNameOfFilesinDirectory(orginPathProjectMain+"model");
 		createNewAspectClasses(classs,aspectPackage,newPackage);
 		createNewOrchestrationClasses(classs,orchestrationPackage,newPackage);
 		createNewRepositoryClasses(classs,repositoryPackage,newPackage);
@@ -220,18 +238,16 @@ public class GeneratorFormService {
 
 		//////////////////////////////////////// generating front parts //////////////////////////////////////////////////////////////////
 		//creer les class du front
-		List<String> classPaths = listFilesInFolder(originModel);
-		for (String classPath : classPaths) {
-			List<String> properties = getPropertiesAndTypesForTS(classPath);
-			String separator = "\\";
-			String[] tab=classPath.replaceAll(Pattern.quote(separator), "\\\\").split("model\\\\");
-			//String[] tab = classPath.split("model\\");
-			String className = tab[1].replace(".java", ""); 
+		List<String> classNames = ListNameOfFilesinDirectory(originModel);
+		for (String className : classNames) {
+			className = className.replace(".java", "");
+			List<String> properties = getPropertiesAndTypesForTS(className);
 			String content = "export class "+className+" {\r\n" +"  ";
 			for (String propertie : properties) {
 				content = content +propertie+"\r\n" +"  ";
 			}
 			content = content + "\r\n" +"}";
+			String operationPath = frontModel+"operation.enum.ts";
 			String newFilePath = frontModel+className.toLowerCase()+".ts";
 			String newSpecFilePath = frontModel+className.toLowerCase()+".spec.ts";
 			String specContent = "import { "+className+" } from './"+className.toLowerCase()+"';\r\n" + 
@@ -243,9 +259,9 @@ public class GeneratorFormService {
 					"});";
 			createFile(newSpecFilePath, specContent);
 			createFile(newFilePath, content);
+			addOperationsToFrontAudit(operationPath,className);
 		}
 		//modifier index.router.ts
-		List<String> classNames = ListNameOfFilesinDirectory(originModel);
 		int i = 1;
 		for (String string : classNames) {
 			i++;
@@ -278,7 +294,6 @@ public class GeneratorFormService {
 					"                  <div class=\"d-flex w-100 justify-content-start align-items-center\">\r\n" + 
 					"                    <i class=\"fa fa-tachometer fa-eercast mr-3\" aria-hidden=\"true\"></i>\r\n" + 
 					"                      <span class=\"menu-collapsed\">"+string+"</span>\r\n" + 
-					"                      <span class=\"dropdown-toggle ml-auto\"></span>\r\n" + 
 					"                  </div>\r\n" + 
 					"              </a>\r\n" + 
 					"              <!-- Submenu content -->\r\n" + 
@@ -291,8 +306,14 @@ public class GeneratorFormService {
 					"                  </a>\r\n" + 
 					"              </div>  \r\n" + 
 					"          </ul><!-- List Group END HereICanAddNewClasss";
-
-			modifySideBar(frontSideBar, newSideBar);
+			
+			String newNavBar = 	"\r\n"+
+								"					<p class=\"active text-center\">"+string+"s</p>\r\n" + 
+								"                    <a class=\"nav-link dropdown-item\" routerLink=\"/new-"+string.toLowerCase()+"\">Add "+string+"</a>\r\n" + 
+								"                    <a class=\"nav-link dropdown-item\" routerLink=\"/"+string.toLowerCase()+"s\">List "+string+"</a>\r\n"+
+								"						<!-- HereICanAddNewClasss";
+			modifyFrontAddingClasses(frontSideBar, newSideBar);
+			modifyFrontAddingClasses(frontNavBar, newNavBar);
 			//creating new modules
 			createNewFrontModuleClass(classNames,frontIndex,originModel);
 
@@ -350,6 +371,10 @@ public class GeneratorFormService {
 		//////////////////////////////////////// generating front-end //////////////////////////////////////////
 		
 		modifyFrontApp(classs,frontApp);
+		
+		System.out.println("Done with frontend");
+		
+		
 
 
 	}
@@ -575,7 +600,7 @@ public class GeneratorFormService {
 		}
 	}
 
-	static void modifySideBar(String filePath, String newString)
+	static void modifyFrontAddingClasses(String filePath, String newString)
 	{
 		File fileToBeModified = new File(filePath);
 		String oldContent = "";
@@ -735,27 +760,14 @@ public class GeneratorFormService {
 			}
 
 			//chaking if oldString exists in the oldContent
-			boolean ifExists = oldContent.contains(oldString);
+			boolean ifExists = oldContent.contains("class "+oldString);
 			if(ifExists) {
 				String newContent = oldContent;
-				System.out.println("//////////////////////////////////////////////////////////////////////////");
-
-				System.out.println("//////////////////////////////////////////////////////////////////////////");
-				//newContent = oldContent.replaceAll("[}]$", "	public void updateProperties(){\n 	Client.getClass().getDeclaredFields(); \n}\n} ");
-
-
-				Matcher m = Pattern.compile("(\\w+)(?:[;])").matcher(oldContent);
-				while (m.find()) {
-					String string = m.group(0);
-					if(string.equals("model;")==false)
-						listOfProperties.add(string.replace(";", ""));
-				}
-
-				Set<String> set = new HashSet<>(listOfProperties);
-				listOfProperties.clear();
-				listOfProperties.addAll(set);
+				listOfProperties = getPropertiesAndTypes(oldString);
+				
 				String method = "public "+oldString+" updateProperties("+oldString+" "+oldString.toLowerCase()+"){\n";
 				for (String string : listOfProperties) {
+					string = string.split(" ")[1];
 					method=method+"this."+string+" = "+oldString.toLowerCase()+"."+string+";\n";
 				}
 				method=method+"return this;\n}\n}";
@@ -763,6 +775,7 @@ public class GeneratorFormService {
 				String tostring = "public String toString() {\r\n" + 
 						"		return \""+oldString+" [";
 				for (String string : listOfProperties) {
+					string = string.split(" ")[1];
 					tostring = tostring +string+"=\" + "+string+" + \", \"+\"";
 				}
 				tostring = tostring + "]\";\r\n" +"	}\n";
@@ -826,27 +839,14 @@ public class GeneratorFormService {
 			}
 
 			//chaking if oldString exists in the oldContent
-			boolean ifExists = oldContent.contains(oldString);
+			boolean ifExists = oldContent.contains("class "+oldString);
 			if(ifExists) {
 				String newContent = oldContent;
-				System.out.println("//////////////////////////////////////////////////////////////////////////");
-
-				System.out.println("//////////////////////////////////////////////////////////////////////////");
-				//newContent = oldContent.replaceAll("[}]$", "	public void updateProperties(){\n 	Client.getClass().getDeclaredFields(); \n}\n} ");
-
-
-				Matcher m = Pattern.compile("(\\w+)(?:[;])").matcher(oldContent);
-				while (m.find()) {
-					String string = m.group(0);
-					if(string.equals("dto;")==false && string.endsWith("DTO;")==false)
-						listOfProperties.add(string.replace(";", ""));
-				}
-
-				Set<String> set = new HashSet<>(listOfProperties);
-				listOfProperties.clear();
-				listOfProperties.addAll(set);
+				listOfProperties = getPropertiesAndTypes(oldString);
+				
 				String method = "public "+oldString+"DTO updateProperties("+oldString+"DTO "+oldString.toLowerCase()+"){\n";
 				for (String string : listOfProperties) {
+					string = string.split(" ")[1];
 					method=method+"this."+string+" = "+oldString.toLowerCase()+"."+string+";\n";
 					System.out.println(string);
 				}
@@ -894,8 +894,7 @@ public class GeneratorFormService {
 		}
 	}
 
-
-	static List<String> getPropertiesAndTypesForTS(String filePath)
+	static void addOperationsToFrontAudit(String filePath, String oldString)
 	{
 		File fileToBeModified = new File(filePath);
 		String oldContent = "";
@@ -911,35 +910,24 @@ public class GeneratorFormService {
 				oldContent = oldContent + line + System.lineSeparator();
 				line = reader.readLine();
 			}
+			
+				String newContent = oldContent;
+				String operation = ",\n"
+									+"	// "+oldString+" operation\n"
+									+"	INSERTE_"+oldString.toUpperCase()+",\n"
+									+"	UPDATE_"+oldString.toUpperCase()+",\n"
+									+"	DELETE_"+oldString.toUpperCase()+"\n}";
+				
+				newContent = newContent.replaceAll("[}]$",operation);
 
-			System.out.println("//////////////////////////////////////////////////////////////////////////");
 
-			System.out.println("//////////////////////////////////////////////////////////////////////////");
-			//newContent = oldContent.replaceAll("[}]$", "	public void updateProperties(){\n 	Client.getClass().getDeclaredFields(); \n}\n} ");
+				FileWriter writer = null;
+				//Rewriting the input text file with newContent
+				writer = new FileWriter(fileToBeModified);
+				writer.write(newContent);
 
-			String rx = "\\w+\\s+\\w*" + ";";
-			Matcher m = Pattern.compile(rx).matcher(oldContent);
-			while (m.find()) {
-				String string = m.group(0);
-				if(!string.contains("model") && !string.startsWith("return")) {
-					string = string.replace(";", "");
-					System.out.println(string);
-					String[] tab = string.split(" ");
-					if(tab[0].toLowerCase().equals("string")) {
-						tab[0]="= '';";}
-					else if(tab[0].toLowerCase().equals("date")) {
-						tab[0]=": Date = new Date();";}
-					else {tab[0]=": any = null;";}
-					string = tab[1]+" "+tab[0];
-					System.out.println(string);
-					listOfProperties.add(string);
-				}
-			}
-
-			Set<String> set = new HashSet<>(listOfProperties);
-			listOfProperties.clear();
-			listOfProperties.addAll(set);
-
+				writer.close();
+			
 		}
 		catch (IOException e)
 		{
@@ -959,68 +947,97 @@ public class GeneratorFormService {
 				e.printStackTrace();
 			}
 		}
-		return listOfProperties;
 	}
-
-	static List<String> getPropertiesAndTypes(String filePath)
+	
+	static List<String> getPropertiesAndTypesForTS(String ClassName)
 	{
-		File fileToBeModified = new File(filePath);
-		String oldContent = "";
-		BufferedReader reader = null;
-		List<String> listOfProperties = new ArrayList<String>();
-		try
-		{
-			reader = new BufferedReader(new FileReader(fileToBeModified));
-			//Reading all the lines of input text file into oldContent
-			String line = reader.readLine();
-			while (line != null) 
-			{
-				oldContent = oldContent + line + System.lineSeparator();
-				line = reader.readLine();
-			}
-
-			System.out.println("//////////////////////////////////////////////////////////////////////////");
-
-			System.out.println("//////////////////////////////////////////////////////////////////////////");
-			//newContent = oldContent.replaceAll("[}]$", "	public void updateProperties(){\n 	Client.getClass().getDeclaredFields(); \n}\n} ");
-
-			String rx = "\\w+\\s+\\w*" + ";";
-			Matcher m = Pattern.compile(rx).matcher(oldContent);
-			while (m.find()) {
-				String string = m.group(0);
-				if(!string.contains("model") && !string.startsWith("return")) {
-					string = string.replace(";", "");
-					System.out.println(string);
-					listOfProperties.add(string);
-				}
-			}
-
-			Set<String> set = new HashSet<>(listOfProperties);
-			listOfProperties.clear();
-			listOfProperties.addAll(set);
-
-		}
-		catch (IOException e)
-		{
-			e.printStackTrace();
-		}
-		finally
-		{
-			try
-			{
-				//Closing the resources
-
-				reader.close();
-				System.out.println("done");
-			} 
-			catch (IOException e) 
-			{
-				e.printStackTrace();
-			}
+		List<String> listOfProperties = new ArrayList();
+		List<String> list = getPropertiesAndTypes(ClassName);
+		for (String string : list) {
+			String[] tab = string.split(" ");
+			if(tab[0].toLowerCase().equals("string")) {
+				tab[0]="= '';";}
+			else if(tab[0].toLowerCase().equals("date")) {
+				tab[0]=": Date = new Date();";}
+			else {tab[0]=": any = null;";}
+			string = tab[1]+" "+tab[0];
+			System.out.println(string);
+			listOfProperties.add(string);
 		}
 		return listOfProperties;
 	}
 
+	static List<String> getPropertiesAndTypes(String className)
+	{
+		List<String> listOfProperties = new ArrayList();
+		String allpath = "src\\main\\java\\ma\\dxc\\generator\\model";
+		String path = "src\\main\\java\\";
+        File dir = new File(allpath);
+        
+        File[] list = dir.listFiles();
+        
+        List<File> l2 = Arrays.asList(list).stream().filter(e-> e.getAbsolutePath().endsWith(".java")).collect(Collectors.toList());
+         
+        //if (helloWorldJava.getParentFile().exists() || helloWorldJava.getParentFile().mkdirs()) {
+
+            try {
+
+                /** Compilation Requirements *********************************************************************************************/
+                DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<JavaFileObject>();
+                JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
+                StandardJavaFileManager fileManager = compiler.getStandardFileManager(diagnostics, null, null);
+
+                List<String> optionList = new ArrayList<String>();
+
+                // hna katzid les jar matalan ila kan hibernate o dakchi
+                optionList.add("-classpath");
+                optionList.add(System.getProperty("java.class.path"));
+
+
+                Iterable<? extends JavaFileObject> compilationUnit
+                        = fileManager.getJavaFileObjectsFromFiles(l2);
+                JavaCompiler.CompilationTask task = compiler.getTask(
+                        null,
+                        fileManager,
+                        diagnostics,
+                        optionList,
+                        null,
+                        compilationUnit);
+                /********************************************************************************************* Compilation Requirements **/
+                if (task.call()) {
+                    /** Load and execute *************************************************************************************************/
+                    System.out.println("Yipe");
+                    URLClassLoader classLoader = new URLClassLoader(new URL[]{new File(path).toURI().toURL()});
+                    Class<?> loadedClass = classLoader.loadClass("ma.dxc.generator.model."+className);
+
+                    for(Field attribut : loadedClass.getDeclaredFields()) {
+                    	// System.out.print("   "+Modifier.toString(attribut.getModifiers()));
+        	        	String type = attribut.getType().getName();
+        	  
+        	        	if(type.contains(".")) {
+        	        		String[] tab = type.toString().split("\\.");
+        	        		type=tab[tab.length-1];
+        	        	}
+        	            System.out.println(type+" "+attribut.getName());
+        	            listOfProperties.add(type+" "+attribut.getName());
+                    }
+
+
+                    /************************************************************************************************* Load and execute **/
+                } else {
+                    for (Diagnostic<? extends JavaFileObject> diagnostic : diagnostics.getDiagnostics()) {
+                        System.out.format("Error on line %d in %s%n",
+                                diagnostic.getLineNumber(),
+                                diagnostic.getSource().toUri());
+                    }
+                }
+                fileManager.close();
+            } catch (IOException | ClassNotFoundException exp) {
+                exp.printStackTrace();
+            }
+		return listOfProperties;
+        
+	}
 	/**
 	 * 
 	 * @param oldFileName
@@ -1444,7 +1461,7 @@ public class GeneratorFormService {
 			for (String string : classs) {
 				string = string.replace("DTO.java", "");
 				//modifyFile(oldClassName, string, newPackage+".model."+string);
-				String importTxt = "import "+newPackage+".dto."+string+"DTO;";
+				String importTxt = "import "+newPackage+".model."+string+";";
 				String packageText = "package "+newPackage+".dto;";
 				addUpdatePropertiesToDTO(oldClassName,string);
 				modifyFileToFixDTOPackage(oldClassName,string,packageText,importTxt);
@@ -1615,7 +1632,7 @@ public class GeneratorFormService {
 			modifyFile(new_newClassNameDirectory+"new-"+newClassName.toLowerCase()+"-routing.module.ts","contact",newClassName.toLowerCase());
 			//creating new-newClass.component.html
 			copyFile(oldNewContactDirectoryPath+"new-contact.component.html",new_newClassNameDirectory+"new-"+newClassName.toLowerCase()+".component.html");
-			createNewFormulaire(new_newClassNameDirectory+"new-"+newClassName.toLowerCase()+".component.html" ,  newClassName, getPropertiesAndTypes(originModel+newClassName+".java"));
+			createNewFormulaire(new_newClassNameDirectory+"new-"+newClassName.toLowerCase()+".component.html" ,  newClassName, getPropertiesAndTypes(newClassName));
 			//creating new-newClass.component.ts
 			copyFile(oldNewContactDirectoryPath+"new-contact.component.ts",new_newClassNameDirectory+"new-"+newClassName.toLowerCase()+".component.ts");
 			modifyFile(new_newClassNameDirectory+"new-"+newClassName.toLowerCase()+".component.ts","Contact",newClassName);
@@ -1632,7 +1649,7 @@ public class GeneratorFormService {
 			copyFile(oldAllContactDirectoryPath+"all-contacts.component.css",all_newClassNameDirectory+"all-"+newClassName.toLowerCase()+"s.component.css");
 			//creating all-newClass.component.html
 			copyFile(oldAllContactDirectoryPath+"all-contacts.component.html",all_newClassNameDirectory+"all-"+newClassName.toLowerCase()+"s.component.html");
-			createListOfObjects(all_newClassNameDirectory+"all-"+newClassName.toLowerCase()+"s.component.html",  newClassName, getPropertiesAndTypes(originModel+newClassName+".java"));
+			createListOfObjects(all_newClassNameDirectory+"all-"+newClassName.toLowerCase()+"s.component.html",  newClassName, getPropertiesAndTypes(newClassName));
 
 			//creating all-newClass.component.ts
 			copyFile(oldAllContactDirectoryPath+"all-contacts.component.ts",all_newClassNameDirectory+"all-"+newClassName.toLowerCase()+"s.component.ts");
@@ -1653,7 +1670,7 @@ public class GeneratorFormService {
 			copyFile(oldSearchContactDirectoryPath+"search-contact.component.html",search_newClassNameDirectory+"search-"+newClassName.toLowerCase()+".component.html");
 			modifyFile(search_newClassNameDirectory+"search-"+newClassName.toLowerCase()+".component.html","Contact",newClassName);
 			modifyFile(search_newClassNameDirectory+"search-"+newClassName.toLowerCase()+".component.html","contact",newClassName.toLowerCase());
-			createListOfObjects(search_newClassNameDirectory+"search-"+newClassName.toLowerCase()+".component.html",  newClassName, getPropertiesAndTypes(originModel+newClassName+".java"));
+			createListOfObjects(search_newClassNameDirectory+"search-"+newClassName.toLowerCase()+".component.html",  newClassName, getPropertiesAndTypes(newClassName));
 			//creating search-newClass.component.ts
 			copyFile(oldSearchContactDirectoryPath+"search-contact.component.ts",search_newClassNameDirectory+"search-"+newClassName.toLowerCase()+".component.ts");
 			modifyFile(search_newClassNameDirectory+"search-"+newClassName.toLowerCase()+".component.ts","Contact",newClassName);

@@ -14,4 +14,5 @@ public static final String FRONT_MODEL = "/src/app/shared/model/";
 public static final String FRONT_INDEX = "/src/app/main/index/";
 public static final String FRONT_INDEX_ROUTER = "/src/app/main/index/index.router.ts";
 public static final String FRONT_SIDE_BAR = "\\src\\app\\shared\\layout\\side-bar\\side-bar.component.html";
+public static final String FRONT_NAV_BAR ="\\src\\app\\shared\\layout\\nav-bar\\nav-bar.component.html";
 }

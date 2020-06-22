@@ -9,8 +9,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import ma.dxc.generator.model.GeneratorForm;
 import ma.dxc.generator.services.GeneratorFormService;
+import ma.dxc.model.GeneratorForm;
 
 @CrossOrigin(origins = "*")
 @RestController

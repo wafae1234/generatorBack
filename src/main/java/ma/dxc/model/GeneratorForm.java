@@ -1,4 +1,4 @@
-package ma.dxc.generator.model;
+package ma.dxc.model;
 
 public class GeneratorForm {
 	
