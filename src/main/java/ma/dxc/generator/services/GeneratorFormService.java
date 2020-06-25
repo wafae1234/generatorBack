@@ -237,16 +237,13 @@ public class GeneratorFormService {
 		renamePackagetoNewPackage(securityPackage,newPackage);
 
 		//////////////////////////////////////// generating front parts //////////////////////////////////////////////////////////////////
+		
+		modifyFrontApp(classs,frontApp);
 		//creer les class du front
 		List<String> classNames = ListNameOfFilesinDirectory(originModel);
 		for (String className : classNames) {
 			className = className.replace(".java", "");
-			List<String> properties = getPropertiesAndTypesForTS(className);
-			String content = "export class "+className+" {\r\n" +"  ";
-			for (String propertie : properties) {
-				content = content +propertie+"\r\n" +"  ";
-			}
-			content = content + "\r\n" +"}";
+			String content = getClassTS(className,classNames);
 			String operationPath = frontModel+"operation.enum.ts";
 			String newFilePath = frontModel+className.toLowerCase()+".ts";
 			String newSpecFilePath = frontModel+className.toLowerCase()+".spec.ts";
@@ -287,6 +284,12 @@ public class GeneratorFormService {
 			createFile(frontAssetsI18n+"\\fr\\"+string.toLowerCase()+"s.json", "{\r\n" + 
 					"    \"ID\": \"Identite\"\r\n" + 
 					"  }");
+			createFile(frontAssetsI18n+"\\en\\new-"+string.toLowerCase()+".json", "{\r\n" + 
+					"    \"ID\": \"Identity\"\r\n" + 
+					"  }");
+			createFile(frontAssetsI18n+"\\fr\\new-"+string.toLowerCase()+".json", "{\r\n" + 
+					"    \"ID\": \"Identite\"\r\n" + 
+					"  }");
 			String newSideBar= "<ul class=\"list-group\">\r\n" + 
 					"              <!-- /END Separator -->\r\n" + 
 					"              <!-- Menu with submenu -->\r\n" + 
@@ -298,10 +301,10 @@ public class GeneratorFormService {
 					"              </a>\r\n" + 
 					"              <!-- Submenu content -->\r\n" + 
 					"              <div id='submenu"+i+"' class=\"collapse sidebar-submenu\">\r\n" + 
-					"                  <a routerLink=\"/new-"+string.toLowerCase()+"\" class=\"nav-link list-group-item list-group-item-action bg-dark text-white\">\r\n" + 
+					"                  <a routerLink=\"/new-"+string.toLowerCase()+"\" class=\"pb-5 nav-link list-group-item list-group-item-action bg-dark text-white\">\r\n" + 
 					"                      <span class=\"menu-collapsed\">Add "+string+"</span>\r\n" + 
 					"                  </a>\r\n" + 
-					"                  <a routerLink=\"/"+string.toLowerCase()+"s\" class=\"nav-link list-group-item list-group-item-action bg-dark text-white\">\r\n" + 
+					"                  <a routerLink=\"/"+string.toLowerCase()+"s\" class=\"pb-5 nav-link list-group-item list-group-item-action bg-dark text-white\">\r\n" + 
 					"                      <span class=\"menu-collapsed\">List "+string+"</span>\r\n" + 
 					"                  </a>\r\n" + 
 					"              </div>  \r\n" + 
@@ -334,6 +337,25 @@ public class GeneratorFormService {
 		File directoryTestMa = new File(originTestMa);
 		File contactModelPackage = new File(modelPackage+"Contact.java");
 		File contactDTOPackage = new File(dtoPackage+"ContactDTO.java");
+		File contactFrontIndex = new File(directoryFront+"\\src\\app\\main\\index\\contacts");
+		File contactFrontModel = new File(directoryFront+"\\src\\app\\shared\\model\\contact.ts");
+		File contactFrontModelSpec = new File(directoryFront+"\\src\\app\\shared\\model\\contact.spec.ts");
+		File contactFrontI18nEn = new File(directoryFront+"\\src\\assets\\i18n\\en\\contacts.json");
+		File contactFrontI18nFr = new File(directoryFront+"\\src\\assets\\i18n\\fr\\contacts.json");
+		File newcontactFrontI18nEn = new File(directoryFront+"\\src\\assets\\i18n\\en\\new-contact.json");
+		File newcontactFrontI18nFr = new File(directoryFront+"\\src\\assets\\i18n\\fr\\new-contact.json");
+		String appModule = directoryFront+"\\src\\app\\app.module.ts";
+		String indexRouter = directoryFront+"\\src\\app\\main\\index\\index.router.ts";
+		String toDelRouter1 = "{" + 
+				"path: 'contacts'," + 
+				"loadChildren: () =>" + 
+				"import('./contacts/contacts.module').then(m => m.ContactsModule)" + 
+				"},";
+		String toDelRouter2 = "{" + 
+				"    path: 'new-contact'," + 
+				"    loadChildren: () =>" + 
+				"      import('./contacts/new-contact/new-contact.module').then(m => m.NewContactModule)" + 
+				"  },";
 
 		//make sure directory exists
 		if(!directoryDto.exists() || !directoryMa.exists() || !directoryModel.exists() || !directoryTestMa.exists() ){
@@ -351,6 +373,19 @@ public class GeneratorFormService {
 				delete(directoryTestMa);
 				delete(contactModelPackage);
 				delete(contactDTOPackage);
+				delete(contactFrontIndex);
+				delete(contactFrontModel);
+				delete(contactFrontModelSpec);
+				delete(contactFrontI18nEn);
+				delete(contactFrontI18nFr);
+				delete(newcontactFrontI18nEn);
+				delete(newcontactFrontI18nFr);
+				System.out.println("removeLine");
+				removeLine(appModule,"contact");
+				removeLine(appModule,"Contact");
+				//System.out.println("modifyFile");
+				//modifyFile(indexRouter,toDelRouter1,"");
+				//modifyFile(indexRouter,toDelRouter2,"");
 
 
 			}catch(IOException e){
@@ -370,11 +405,19 @@ public class GeneratorFormService {
 
 		//////////////////////////////////////// generating front-end //////////////////////////////////////////
 		
-		modifyFrontApp(classs,frontApp);
+		
 		
 		System.out.println("Done with frontend");
 		
-		
+		String directoryPath = System.getProperty("user.dir")+"\\src\\main\\java\\ma\\dxc\\generator\\model";
+        
+        File modelDirectory = new File(directoryPath);
+        try {
+			FileUtils.cleanDirectory(modelDirectory);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 
 
 	}
@@ -949,22 +992,43 @@ public class GeneratorFormService {
 		}
 	}
 	
-	static List<String> getPropertiesAndTypesForTS(String ClassName)
+	static String getClassTS(String className, List<String> classNames)
 	{
-		List<String> listOfProperties = new ArrayList();
-		List<String> list = getPropertiesAndTypes(ClassName);
+		List<String> listOfProperties = new ArrayList<String>();
+		List<String> list = getPropertiesAndTypes(className);
+		for (String string : classNames) {
+			string=string.replaceAll(".java", "");
+		}
+		String importText = "";
 		for (String string : list) {
 			String[] tab = string.split(" ");
+			
 			if(tab[0].toLowerCase().equals("string")) {
 				tab[0]="= '';";}
 			else if(tab[0].toLowerCase().equals("date")) {
 				tab[0]=": Date = new Date();";}
+			else if(tab[0].toLowerCase().equals(tab[1].toLowerCase())) {
+				importText = importText + "import { "+tab[0]+" } from './"+tab[0].toLowerCase()+"';\r\n";
+				tab[0]=": "+tab[0]+" = null;";
+			}
+			else if(tab[0].toLowerCase().equals("set")) {
+				String type = tab[1].substring(0, tab[1].length() - 1);
+				type = type.substring(0, 1).toUpperCase() + type.substring(1);
+				importText = importText + "import { "+type+" } from './"+type.toLowerCase()+"';\r\n";
+				tab[0]=": Array<"+type+"> = null;";
+			}
 			else {tab[0]=": any = null;";}
 			string = tab[1]+" "+tab[0];
 			System.out.println(string);
 			listOfProperties.add(string);
 		}
-		return listOfProperties;
+		String content = importText+"\r\n"+"export class "+className+" {\r\n" +"  ";
+		for (String propertie : listOfProperties) {
+			content = content +propertie+"\r\n" +"  ";
+		}
+		content = content + "\r\n" +"}";
+		
+		return content;
 	}
 
 	static List<String> getPropertiesAndTypes(String className)
@@ -988,8 +1052,6 @@ public class GeneratorFormService {
                 StandardJavaFileManager fileManager = compiler.getStandardFileManager(diagnostics, null, null);
 
                 List<String> optionList = new ArrayList<String>();
-
-                // hna katzid les jar matalan ila kan hibernate o dakchi
                 optionList.add("-classpath");
                 optionList.add(System.getProperty("java.class.path"));
 
@@ -1571,9 +1633,21 @@ public class GeneratorFormService {
 	}
 
 	static void createNewFrontModuleClass(List<String> newClassNames,String frontIndex,String originModel) {
-
+		List<String> list = new ArrayList<String>();
+		for (String string : newClassNames) {
+			string = string.replace(".java", "");
+			list.add(string);
+		}
 		for (String newClassName : newClassNames) {
 			newClassName=newClassName.replace(".java", "");
+			boolean therIsSet = false;
+			for (String string : getPropertiesAndTypes(newClassName)) {
+				String[] tab = string.split(" ");
+				if(tab[0].toLowerCase().equals("set")|| list.contains(tab[0])) {
+					therIsSet = true;
+					break;
+				}
+			}
 			String newDirectoryPath = frontIndex+newClassName.toLowerCase()+"s\\";
 			String oldDirectoryPath = frontIndex+"contacts\\";
 			String oldSharedDirectoryPath = frontIndex+"contacts\\shared\\";
@@ -1618,8 +1692,13 @@ public class GeneratorFormService {
 			createDirectory(new_newClassNameDirectory);
 			//creating new-newClass.module.ts
 			copyFile(oldNewContactDirectoryPath+"new-contact.module.ts",new_newClassNameDirectory+"new-"+newClassName.toLowerCase()+".module.ts");
-			modifyFile(new_newClassNameDirectory+"new-"+newClassName.toLowerCase()+".module.ts","Contact",newClassName);
-			modifyFile(new_newClassNameDirectory+"new-"+newClassName.toLowerCase()+".module.ts","contact",newClassName.toLowerCase());
+			if(therIsSet) 
+				createNewNewClassModulWithSet(new_newClassNameDirectory+"new-"+newClassName.toLowerCase()+".module.ts" ,  newClassName, getPropertiesAndTypes(newClassName),newClassNames);
+			else {
+				modifyFile(new_newClassNameDirectory+"new-"+newClassName.toLowerCase()+".module.ts","Contact",newClassName);
+				modifyFile(new_newClassNameDirectory+"new-"+newClassName.toLowerCase()+".module.ts","contact",newClassName.toLowerCase());
+				
+			}
 			//creating new-newClass.component.spec.ts
 			copyFile(oldNewContactDirectoryPath+"new-contact.component.spec.ts",new_newClassNameDirectory+"new-"+newClassName.toLowerCase()+".component.spec.ts");
 			modifyFile(new_newClassNameDirectory+"new-"+newClassName.toLowerCase()+".component.spec.ts","Contact",newClassName);
@@ -1632,12 +1711,16 @@ public class GeneratorFormService {
 			modifyFile(new_newClassNameDirectory+"new-"+newClassName.toLowerCase()+"-routing.module.ts","contact",newClassName.toLowerCase());
 			//creating new-newClass.component.html
 			copyFile(oldNewContactDirectoryPath+"new-contact.component.html",new_newClassNameDirectory+"new-"+newClassName.toLowerCase()+".component.html");
-			createNewFormulaire(new_newClassNameDirectory+"new-"+newClassName.toLowerCase()+".component.html" ,  newClassName, getPropertiesAndTypes(newClassName));
+			createNewFormulaire(new_newClassNameDirectory+"new-"+newClassName.toLowerCase()+".component.html" ,  newClassName, getPropertiesAndTypes(newClassName),newClassNames);
 			//creating new-newClass.component.ts
 			copyFile(oldNewContactDirectoryPath+"new-contact.component.ts",new_newClassNameDirectory+"new-"+newClassName.toLowerCase()+".component.ts");
-			modifyFile(new_newClassNameDirectory+"new-"+newClassName.toLowerCase()+".component.ts","Contact",newClassName);
-			modifyFile(new_newClassNameDirectory+"new-"+newClassName.toLowerCase()+".component.ts","contact",newClassName.toLowerCase());
-
+			if(therIsSet) 
+				createNewNewClassWithSet(new_newClassNameDirectory+"new-"+newClassName.toLowerCase()+".component.ts",  newClassName, getPropertiesAndTypes(newClassName),newClassNames);
+			else {
+				modifyFile(new_newClassNameDirectory+"new-"+newClassName.toLowerCase()+".component.ts","Contact",newClassName);
+				modifyFile(new_newClassNameDirectory+"new-"+newClassName.toLowerCase()+".component.ts","contact",newClassName.toLowerCase());
+				
+			}
 			//creating all-newClass directory
 			String all_newClassNameDirectory = newDirectoryPath+"\\all-"+newClassName.toLowerCase()+"s\\";
 			createDirectory(all_newClassNameDirectory);
@@ -1696,14 +1779,20 @@ public class GeneratorFormService {
 		}
 	}
 
-	static void createNewFormulaire(String filePath, String className,List<String> propertiesAndTypes) {
-		String header = "<div class=\"container-fluid mb-5\">\r\n" + 
-				"  <p></p>\r\n" + 
-				"  <h2>{{'NEW"+className.toUpperCase()+"' | translate}}</h2>\r\n" + 
-				"</div>\r\n" + 
-				"\r\n" + 
-				"<form class=\"container size\"  #"+className.toLowerCase()+"Form=\"ngForm\" (ngSubmit)=\"OnSubmit()\" novalidate>\r\n" + 
-				"";
+	static void createNewFormulaire(String filePath, String className,List<String> propertiesAndTypes, List<String> newClassNames) {
+		List<String> list = new ArrayList<String>();
+		for (String string : newClassNames) {
+			string = string.replace(".java", "");
+			list.add(string);
+		}
+		String header = "<div class=\"container mt-5\">\r\n" + 
+				"    <div class=\"row ml-5\" style=\"width: 60%;margin-left: 15%!important;\">\r\n" + 
+				"        <div class=\"col\">\r\n" + 
+				"            <div class=\"card\">\r\n" + 
+				"                <div class=\"card-header bg-darkblue text-white\"><i class=\"fa fa-"+className.toLowerCase()+"\"></i> "+className+" informations\r\n" + 
+				"              </div>\r\n" + 
+				"              <div class=\"card-body\">\r\n" + 
+				"                <form class=\"container size\"  #"+className.toLowerCase()+"Form=\"ngForm\" (ngSubmit)=\"OnSubmit()\" novalidate>";
 
 		String body = "";
 		for (String string : propertiesAndTypes) {
@@ -1713,16 +1802,49 @@ public class GeneratorFormService {
 					body = body +"\r\n" + 
 							"  <div class=\"form-group\">\r\n" + 
 							"    <label>{{'"+tab[1].toUpperCase()+"' | translate}} :</label>\r\n" + 
-							"    <input class=\"form-control\" #"+tab[1].toLowerCase()+"=\"ngModel\" [(ngModel)]=\""+className.toLowerCase()+"."+tab[1].toLowerCase()+"\" type=\"date\" name=\""+tab[1].toLowerCase()+"\" required>\r\n" + 
-							"    <small class=\"text-danger\" [class.d-none]=\""+tab[1].toLowerCase()+".valid || "+tab[1].toLowerCase()+".untouched\">Le champ "+tab[1].toLowerCase()+" est requis</small>\r\n" + 
+							"    <input class=\"form-control\" #"+tab[1]+"=\"ngModel\" [(ngModel)]=\""+className.toLowerCase()+"."+tab[1]+"\" type=\"date\" name=\""+tab[1]+"\" required>\r\n" + 
+							"    <small class=\"text-danger\" [class.d-none]=\""+tab[1]+".valid || "+tab[1]+".untouched\">Le champ "+tab[1]+" est requis</small>\r\n" + 
 							"  </div>\r\n" + 
 							"";
-				}else {
+				}
+				else if(tab[0].toLowerCase().equals("set") || list.contains(tab[0])) {
+					String type = "";
+					if(tab[0].toLowerCase().equals("set")) {
+						type = tab[1].substring(0, tab[1].length() - 1);
+						type = type.substring(0, 1).toUpperCase() + type.substring(1);
+						body = body + 
+								"                    <div class=\"form-group\">\r\n" + 
+								"                        <ng-multiselect-dropdown\r\n" + 
+								"                        name=\""+type.toLowerCase()+"2\" \r\n" + 
+								"                        [settings]=\"dropdownSettings\"\r\n" + 
+								"                        [data]=\""+type.toLowerCase()+"s\"\r\n" + 
+								"                        [(ngModel)]=\"selected"+type+"Items\"\r\n" + 
+								"                        [placeholder]=\"'"+type+"s'\"\r\n" + 
+								"                        (onSelect)=\"on"+type+"ItemSelect($event)\">\r\n" + 
+								"                        </ng-multiselect-dropdown>\r\n" + 
+								"                    </div>";
+					}else {
+						type = tab[0];
+						body = body + 
+								"                    <div class=\"form-group\">\r\n" + 
+								"                        <ng-multiselect-dropdown\r\n" + 
+								"                        name=\""+type.toLowerCase()+"2\" \r\n" + 
+								"                        [settings]=\"dropdownSettingsForUnique\"\r\n" + 
+								"                        [data]=\""+type.toLowerCase()+"s\"\r\n" + 
+								"                        [(ngModel)]=\"selected"+type+"Items\"\r\n" + 
+								"                        [placeholder]=\"'"+type+"s'\"\r\n" + 
+								"                        (onSelect)=\"on"+type+"ItemSelect($event)\">\r\n" + 
+								"                        </ng-multiselect-dropdown>\r\n" + 
+								"                    </div>";
+					}
+					
+				}
+				else {
 					body = body +"\r\n" + 
 							"  <div class=\"form-group\">\r\n" + 
 							"      <label>{{'"+tab[1].toUpperCase()+"' | translate}} :</label>\r\n" + 
-							"      <input class=\"form-control\" #"+tab[1].toLowerCase()+"=\"ngModel\" [class.is-invalid]=\""+tab[1].toLowerCase()+".invalid && "+tab[1].toLowerCase()+".touched\" [(ngModel)]=\""+className.toLowerCase()+"."+tab[1].toLowerCase()+"\" type=\"text\" name=\""+tab[1].toLowerCase()+"\" required>\r\n" + 
-							"      <small class=\"text-danger\" [class.d-none]=\""+tab[1].toLowerCase()+".valid || "+tab[1].toLowerCase()+".untouched\">Le champ "+tab[1].toLowerCase()+" est requis !</small>\r\n" + 
+							"      <input class=\"form-control\" #"+tab[1]+"=\"ngModel\" [class.is-invalid]=\""+tab[1]+".invalid && "+tab[1]+".touched\" [(ngModel)]=\""+className.toLowerCase()+"."+tab[1]+"\" type=\"text\" name=\""+tab[1]+"\" required>\r\n" + 
+							"      <small class=\"text-danger\" [class.d-none]=\""+tab[1]+".valid || "+tab[1]+".untouched\">Le champ "+tab[1]+" est requis !</small>\r\n" + 
 							"  </div>\r\n" + 
 							"";
 				}
@@ -1733,12 +1855,246 @@ public class GeneratorFormService {
 				"  <div>\r\n" + 
 				"    <button [disabled]=\""+className.toLowerCase()+"Form.form.invalid\" class=\"btn btn-success\" type=\"submit\">{{'SAVE' | translate}}</button>\r\n" + 
 				"  </div>\r\n" + 
-				"</form>";
+				"</form>"+"\r\n" + 
+				"            </div>\r\n" + 
+				"         </div>\r\n" + 
+				"      </div>\r\n" + 
+				"    </div>\r\n" + 
+				"</div>\r\n" + 
+				"<br>";
 
 		String page = header+body+footer;
 		modifyAllFile(filePath, page);
 	}
-
+	
+	static void createNewNewClassWithSet(String filePath, String className,List<String> propertiesAndTypes, List<String> newClassNames) {
+		List<String> list = new ArrayList<String>();
+		for (String string : newClassNames) {
+			string = string.replace(".java", "");
+			list.add(string);
+		}
+		String importText = "import { Component, OnInit } from '@angular/core';\r\n" + 
+				"import { IDropdownSettings } from 'ng-multiselect-dropdown';\r\n" + 
+				"import { Router, ActivatedRoute } from '@angular/router';\r\n" + 
+				"import { "+className+" } from 'src/app/shared/model/"+className.toLowerCase()+"';\r\n" + 
+				"import { I18nComponent } from 'src/app/shared/lang/i18n/container/i18n.component';\r\n" + 
+				"import { Store } from '@ngrx/store';\r\n" + 
+				"import { TranslateService } from '@ngx-translate/core';\r\n" + 
+				"import * as fromI18n from '../../../../shared/lang/i18n/reducers';\r\n" + 
+				"import { "+className+"sService } from 'src/app/main/index/"+className.toLowerCase()+"s/shared/"+className.toLowerCase()+"s.service';\r\n" + 
+				"import { FormBuilder } from '@angular/forms';"+
+				"\r\n" + 
+				"\r\n" + 
+				"@Component({\r\n" + 
+				"  selector: 'app-new-"+className.toLowerCase()+"',\r\n" + 
+				"  templateUrl: './new-"+className.toLowerCase()+".component.html',\r\n" + 
+				"  styleUrls: ['./new-"+className.toLowerCase()+".component.css'],\r\n" +
+				"providers: ["+className+"sService";
+		String importText2 ="]\r\n"+
+				"})\r\n" + 
+				"export class New"+className+"Component extends I18nComponent{\r\n" + 
+				"  id: string;\r\n" + 
+				"  mode = 1;\r\n" + 
+				"  "+className.toLowerCase()+":any;\r\n"+
+				"  dropdownSettings:IDropdownSettings={};\r\n"+
+				"  dropdownSettingsForUnique:IDropdownSettings={};\r\n";
+		String constructor = "\r\n" + 
+				"  constructor(\r\n" + 
+				"    private fb: FormBuilder,\r\n" + 
+				"    readonly translate: TranslateService,\r\n"+ 
+				"    private router: Router,\r\n" + 
+				"    private route: ActivatedRoute,\r\n" + 
+				"    readonly store: Store<fromI18n.State>,\r\n"+
+				"    private "+className.toLowerCase()+"service: "+className+"sService\r\n"; 
+		String contructor2 ="\r\n"+
+				") {\r\n" + 
+				"      super(store, translate);\r\n" + 
+				"\r\n" + 
+				"      this."+className.toLowerCase()+" = new "+className+"();";
+		String contructor3 ="\r\n" + 
+				"      this.dropdownSettingsForUnique = {\r\n" + 
+				"        singleSelection: true,\r\n" + 
+				"        idField: 'id',\r\n" + 
+				"        textField: 'id',\r\n" + 
+				"        selectAllText: 'Select All',\r\n" + 
+				"        unSelectAllText: 'UnSelect All',\r\n" + 
+				"        itemsShowLimit: 3,\r\n" + 
+				"        allowSearchFilter: true\r\n" + 
+				"      };\r\n" + 
+				"      this.dropdownSettings = {\r\n" + 
+				"        singleSelection: false,\r\n" + 
+				"        idField: 'id',\r\n" + 
+				"        textField: 'id',\r\n" + 
+				"        selectAllText: 'Select All',\r\n" + 
+				"        unSelectAllText: 'UnSelect All',\r\n" + 
+				"        itemsShowLimit: 3,\r\n" + 
+				"        allowSearchFilter: true\r\n" + 
+				"      };\r\n" + 
+				"      this.route.queryParams.subscribe((params) => {\r\n" + 
+				"        this.id = params.id;\r\n" + 
+				"        if (typeof this.id === 'undefined'){\r\n" + 
+				"          this.mode = 1;\r\n" + 
+				"        }\r\n" + 
+				"        else {\r\n" + 
+				"          this.mode = 0;\r\n" + 
+				"        }\r\n" + 
+				"      });\r\n" + 
+				"      this."+className.toLowerCase()+"service.get"+className+"ById(this.id)\r\n" + 
+				"      .subscribe(data => {\r\n" + 
+				"        this."+className.toLowerCase()+" = data;";
+		String constructor4 = "\r\n" + 
+				"      }, error => console.log('error : \\n' + error));\r\n" + 
+				"     }\r\n" + 
+				"";
+		String constructor5 = "\r\n" + 
+				"  OnSubmit(){\r\n";
+		String constructor6 = "if (this.mode === 1) {\r\n" + 
+				"        this."+className.toLowerCase()+"service.save"+className+"(this."+className.toLowerCase()+").subscribe(data => console.log('"+className.toLowerCase()+" added successfully'));\r\n" + 
+				"      } else {\r\n" + 
+				"        this."+className.toLowerCase()+"service.update"+className+"(this."+className.toLowerCase()+").subscribe(data => console.log('"+className.toLowerCase()+" updated successfully'));\r\n" + 
+				"      }\r\n" + 
+				"      this.router.navigate(['/"+className.toLowerCase()+"']);\r\n" + 
+				"  }\r\n" + 
+				"\r\n" + 
+				"\r\n" + 
+				"\r\n" + 
+				"}";
+		
+		String newImportText = "";
+		String newImportText2 = "";
+		String newAttributesText = "";
+		String newConstructor = "";
+		String newConstructor2 = "";
+		String newConstructor3 = "";
+		String newConstructor4 = "";
+		String newConstructor5 = "";
+		for (String string : propertiesAndTypes) {
+			String[] tab = string.split(" ");
+			if(tab[0].toLowerCase().equals("set") || list.contains(tab[0])) {
+				String type = "";
+				if(tab[0].toLowerCase().equals("set")) {
+					type = tab[1].substring(0, tab[1].length() - 1);
+					type = type.substring(0, 1).toUpperCase() + type.substring(1);
+					
+				}else {
+					type = tab[0];
+					
+				}
+				newImportText = newImportText +"\r\n"+
+								"import { "+type+" } from 'src/app/shared/model/"+type.toLowerCase()+"';\r\n" + 
+								"import { "+type+"sService } from 'src/app/main/index/"+type.toLowerCase()+"s/shared/"+type.toLowerCase()+"s.service';\r\n";
+				newImportText2 = newImportText2 +","+type+"sService";
+				newAttributesText = newAttributesText +"\r\n"+
+								"  "+type.toLowerCase()+"sI: any;\r\n" + 
+								"  "+type.toLowerCase()+"s: any;\r\n" + 
+								"  "+className.toLowerCase()+type+"s:Array<"+type+">;\r\n" + 
+								"  selected"+type+"Items: Array<any> = [];";
+				newConstructor = newConstructor +",\r\n"+
+								"    private "+type.toLowerCase()+"sService: "+type+"sService	\r\n" ;
+				newConstructor2 = newConstructor2 + "\r\n"+
+								"this.getPageOf"+type+"s();";
+				newConstructor3 = newConstructor3 +"\r\n" + 
+						"        this."+className.toLowerCase()+type+"s = data['"+type.toLowerCase()+"s'];\r\n" + 
+						"        this.selected"+type+"Items = this."+className.toLowerCase()+type+"s\r\n" + 
+						"                 .map(item => item)\r\n" + 
+						"                 .filter((thing, i, arr) => arr.findIndex(t => t.id === thing.id) === i);\r\n" + 
+						"      console.log('selected"+type+"Items efter click on edit: \\n' + this.selected"+type+"Items);";
+				newConstructor4 = newConstructor4 + "\r\n" + 
+						"  getPageOf"+type+"s() {\r\n" + 
+						"    this."+type.toLowerCase()+"sService.get"+type+"s()\r\n" + 
+						"      .subscribe(data => {\r\n" + 
+						"        this."+type.toLowerCase()+"sI = data;\r\n" + 
+						"        this."+type.toLowerCase()+"s = this."+type.toLowerCase()+"sI.map(\r\n" + 
+						"          item => {return{id: item.id}})\r\n" + 
+						"        .filter((value, index, self) => self.indexOf(value) === index);\r\n" + 
+						"      }, error => {\r\n" + 
+						"        this.router.navigateByUrl('/**');\r\n" + 
+						"      });\r\n" + 
+						"  }\r\n" + 
+						"\r\n" + 
+						"  on"+type+"ItemSelect(item: any) {\r\n" + 
+						"    console.log('item : \\n' + item);\r\n" + 
+						"    console.log('electedItems : \\n' + this.selected"+type+"Items);\r\n" + 
+						"  }\r\n" + 
+						"";
+				newConstructor5 = newConstructor5 + "\r\n" + 
+						"      this."+className.toLowerCase()+"."+type.toLowerCase()+"s = this.selected"+type+"Items.map(x => x);\r\n";
+				
+			}
+		}
+		
+		String page = newImportText+importText+newImportText2+importText2+newAttributesText+constructor+newConstructor
+						+contructor2+newConstructor2+contructor3+newConstructor3+constructor4+newConstructor4
+						+constructor5+newConstructor5+constructor6;
+		modifyAllFile(filePath, page);
+	}
+	
+	static void createNewNewClassModulWithSet(String filePath, String className,List<String> propertiesAndTypes, List<String> newClassNames) {
+		List<String> list = new ArrayList<String>();
+		for (String string : newClassNames) {
+			string = string.replace(".java", "");
+			list.add(string);
+		}
+		String importText = "import { NgModule } from '@angular/core';\r\n" + 
+				"import { CommonModule } from '@angular/common';\r\n" + 
+				"\r\n" + 
+				"import { New"+className+"RoutingModule } from './new-"+className.toLowerCase()+"-routing.module';\r\n" + 
+				"import { New"+className+"Component } from './new-"+className.toLowerCase()+".component';\r\n" + 
+				"import { FormsModule, ReactiveFormsModule } from '@angular/forms';\r\n" + 
+				"import { I18nModule } from 'src/app/shared/lang/i18n/i18n.module';\r\n" + 
+				"import { TranslateModule, TranslateLoader } from '@ngx-translate/core';\r\n" + 
+				"import { HttpClient } from '@angular/common/http';\r\n" + 
+				"import { TranslateHttpLoader } from '@ngx-translate/http-loader';";
+		
+		String newImportText = "\r\n" + 
+				"import { NgMultiSelectDropDownModule } from 'ng-multiselect-dropdown';";
+		
+		String body = "\r\n" + 
+				"export function createTranslateLoader(http: HttpClient) {\r\n" + 
+				"  return new TranslateHttpLoader(http, '../../../../../assets/i18n/', '/new-"+className.toLowerCase()+".json');\r\n" + 
+				"}\r\n" + 
+				"\r\n" + 
+				"@NgModule({\r\n" + 
+				"  declarations: [New"+className+"Component],\r\n" + 
+				"  imports: [\r\n" + 
+				"    CommonModule,\r\n" + 
+				"    New"+className+"RoutingModule,\r\n" + 
+				"    FormsModule,\r\n" + 
+				"    I18nModule,\r\n" + 
+				"    TranslateModule.forChild({\r\n" + 
+				"      loader: {\r\n" + 
+				"        provide: TranslateLoader,\r\n" + 
+				"        useFactory: createTranslateLoader,\r\n" + 
+				"        deps: [HttpClient]\r\n" + 
+				"      },\r\n" + 
+				"      isolate: true\r\n" + 
+				"    }),";
+		
+		String newBody = "\r\n" + 
+				"    NgMultiSelectDropDownModule.forRoot(),"+
+				"\r\n" + 
+				"    ReactiveFormsModule";
+		
+		String footer = "]\r\n" + 
+				"})\r\n" + 
+				"export class New"+className+"Module { }\r\n" + 
+				"";
+		String page = "";
+		boolean therIsSet = false;
+		for (String string : propertiesAndTypes) {
+			String[] tab = string.split(" ");
+			if(tab[0].toLowerCase().equals("set") || list.contains(tab[0])) {
+				therIsSet = true;
+				break;
+			}
+		}
+		
+		if(therIsSet) page = importText+newImportText+body+newBody+footer;
+		else page = importText+body+footer;
+			
+		modifyAllFile(filePath, page);
+		
+	}
 	static void createListOfObjects(String filePath, String className,List<String> propertiesAndTypes){
 		String header = "<table class=\"table table-striped\">\r\n" + 
 				"    <tr>\r\n" + 
@@ -1751,15 +2107,33 @@ public class GeneratorFormService {
 		}
 
 
-		String body2 = "</tr>\r\n" + 
+		String body2 = "<th>{{'ACTIONS' | translate}}</th>\r\n" + 
+				"    </tr>\r\n" + 
 				"    <tr *ngFor=\"let "+className.toLowerCase()+" of "+className.toLowerCase()+"s\">";
 
 		String body3 = "";
 		for (String string : propertiesAndTypes) {
 			String[] tab = string.split(" ");
-			if(!tab[1].toLowerCase().equals("id"))
+			if(tab[0].toLowerCase().equals("set")) {
+				String typeText = tab[1].substring(0, tab[1].length() - 1);
 				body3 = body3+"\r\n" + 
-						"      <td>{{"+className.toLowerCase()+"."+tab[1].toLowerCase()+"}}</td>\r\n" + 
+						"      <td>\r\n" + 
+						"        <ul>\r\n" + 
+						"          <li *ngFor=\"let "+typeText+" of "+className.toLowerCase()+"."+tab[1]+"\">{{ "+typeText+".id}}</li>\r\n" + 
+						"        </ul>\r\n" + 
+						"      </td>";
+			}
+			else if(tab[1].toLowerCase().equals("date"))
+				body3 = body3+"\r\n" + 
+						"      <td>{{"+className.toLowerCase()+"."+tab[1]+"}}</td>\r\n" + 
+						"      ";
+			else if(tab[0].toLowerCase().equals(tab[1])) 
+				body3 = body3+"\r\n" + 
+						"      <td>{{"+className.toLowerCase()+"."+tab[1]+".id}}</td>\r\n" + 
+						"      ";
+			else if(!tab[1].toLowerCase().equals("id"))
+				body3 = body3+"\r\n" + 
+						"      <td>{{"+className.toLowerCase()+"."+tab[1]+"}}</td>\r\n" + 
 						"      ";
 		}
 
