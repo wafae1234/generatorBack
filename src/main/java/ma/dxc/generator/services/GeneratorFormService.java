@@ -117,6 +117,9 @@ public class GeneratorFormService {
 		String packagePathOperations = servicePackage + "audit\\";
 
 		String pathMainResFile = directoryBack + BaseConstants.MAIN_RES_DIR + "application.properties";
+		
+		String pathChangeLog = directoryBack + BaseConstants.MAIN_RES_DIR + "\\data\\changelog\\";
+		String pathChangeLogMaster = pathChangeLog+"\\changelog-master.xml";
 
 		String repoUrlBack = "https://github.com/chaalidiae/ServerSideCrudDxc.git";
 
@@ -315,15 +318,22 @@ public class GeneratorFormService {
 								"                    <a class=\"nav-link dropdown-item\" routerLink=\"/new-"+string.toLowerCase()+"\">Add "+string+"</a>\r\n" + 
 								"                    <a class=\"nav-link dropdown-item\" routerLink=\"/"+string.toLowerCase()+"s\">List "+string+"</a>\r\n"+
 								"						<!-- HereICanAddNewClasss";
-			modifyFrontAddingClasses(frontSideBar, newSideBar);
-			modifyFrontAddingClasses(frontNavBar, newNavBar);
+			modifyAddingClasses(frontSideBar, newSideBar);
+			modifyAddingClasses(frontNavBar, newNavBar);
 			//creating new modules
 			createNewFrontModuleClass(classNames,frontIndex,originModel);
 
 		}
 
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////		
-
+		
+		String newChangeLogPath = "<include  file=\"data/changelog/changelog-v0.0.3.xml\"/> \r\n" + 
+				"  <!-- HereICanAddNewClasss ";
+		modifyAddingClasses(pathChangeLogMaster, newChangeLogPath);
+		createChangeLog(pathChangeLog, classNames);
+		
+		
+		
 		renameModelPackagetoNewPackage(originModel,newPackage);
 		renameDtoPackagetoNewPackage(originDto,newPackage);
 
@@ -643,7 +653,7 @@ public class GeneratorFormService {
 		}
 	}
 
-	static void modifyFrontAddingClasses(String filePath, String newString)
+	static void modifyAddingClasses(String filePath, String newString)
 	{
 		File fileToBeModified = new File(filePath);
 		String oldContent = "";
@@ -2160,4 +2170,37 @@ public class GeneratorFormService {
 		modifyAllFile(filePath, page);
 	}
 
+	static void createChangeLog(String pathChangeLog, List<String> newClassNames) {
+		String header = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>   \r\n" + 
+				"<databaseChangeLog  \r\n" + 
+				"  xmlns=\"http://www.liquibase.org/xml/ns/dbchangelog\"  \r\n" + 
+				"  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"  \r\n" + 
+				"  xsi:schemaLocation=\"http://www.liquibase.org/xml/ns/dbchangelog\r\n" + 
+				"                      http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd\">  \r\n" + 
+				"  <changeSet id=\"1\" author=\"benali\">";
+		String footer = "</changeSet>\r\n" + 
+				"</databaseChangeLog>";
+		List<String> list = new ArrayList<String>();
+		list.add("READ");
+		list.add("ADD");
+		list.add("UPDATE");
+		list.add("DELETE");
+		String insert = "";
+		int i = 4;
+		for (String string : newClassNames) {
+			string = string.replace(".java", "").toUpperCase();
+			for (String prefix : list) {
+				i++;
+				insert = insert + "<insert tableName=\"permission\">\r\n" + 
+						"  		<column name=\"id\" value=\""+i+"\" />\r\n" + 
+						"  		<column name=\"permission_name\" value=\""+prefix+string+"\" />\r\n" + 
+						"  		<column name=\"deleted\" valueBoolean=\"false\" />\r\n" + 
+						"  	</insert>";
+			}
+			
+		}
+		String page = header+insert+footer;
+		copyFile(pathChangeLog+"changelog-v0.0.1.xml",pathChangeLog+"changelog-v0.0.3.xml");
+		modifyAllFile(pathChangeLog+"changelog-v0.0.3.xml", page);
+	}
 }
