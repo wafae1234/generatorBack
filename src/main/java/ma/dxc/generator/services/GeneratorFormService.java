@@ -48,6 +48,9 @@ import org.eclipse.jgit.api.errors.GitAPIException;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.stereotype.Service;
 
+import com.fasterxml.jackson.annotation.JsonIdentityInfo;
+import com.fasterxml.jackson.annotation.ObjectIdGenerators;
+
 import ma.dxc.model.GeneratorForm;
 
 @Service
@@ -226,6 +229,7 @@ public class GeneratorFormService {
 		createNewSpecificationClasses(classs,repositorySpecPackage,newPackage);
 		createNewRestServiceClasses(classs,restPackage,newPackage);
 		createNewServiceClasses(classs,servicePackage,newPackage);
+		addAnnotationToModelClasses(classs,originModel);
 
 		try {
 			createNewSpecsOperations(classs,packagePathOperations +"Operation.java");
@@ -1272,6 +1276,22 @@ public class GeneratorFormService {
 		}
 		return names;
 	}
+	
+	static void addAnnotationToModelClasses(List<String> newClassNames, String packagePath) {
+		
+		for (String newClassName : newClassNames) {
+			newClassName=newClassName.replace(".java", "");
+			String oldString ="public class "+newClassName;
+			String newString ="@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class,property = \"id\")\r\n" + 
+					"public class "+newClassName;
+			String oldImport= "import javax.persistence.*;";
+			String newImport=oldImport+"\r\n" + 
+					"import com.fasterxml.jackson.annotation.JsonIdentityInfo;\r\n" + 
+					"import com.fasterxml.jackson.annotation.ObjectIdGenerators;";
+			modifyFile(packagePath+newClassName+".java", oldString,newString);
+			modifyFile(packagePath+newClassName+".java", oldImport,newImport);
+		}
+	}
 
 	/**
 	 * 
@@ -2139,7 +2159,7 @@ public class GeneratorFormService {
 						"      ";
 			else if(tab[0].toLowerCase().equals(tab[1])) 
 				body3 = body3+"\r\n" + 
-						"      <td>{{"+className.toLowerCase()+"."+tab[1]+".id}}</td>\r\n" + 
+						"      <td>{{"+className.toLowerCase()+"."+tab[1]+"}}</td>\r\n" + 
 						"      ";
 			else if(!tab[1].toLowerCase().equals("id"))
 				body3 = body3+"\r\n" + 
@@ -2185,21 +2205,30 @@ public class GeneratorFormService {
 		list.add("ADD");
 		list.add("UPDATE");
 		list.add("DELETE");
-		String insert = "";
-		int i = 4;
+		String insertPermission = "";
+		String insertRolePermissions="";
+		int i = 5;
 		for (String string : newClassNames) {
 			string = string.replace(".java", "").toUpperCase();
+			insertRolePermissions = insertRolePermissions + "\r\n<insert tableName=\"app_role_permissions\">\r\n" + 
+					"  		<column name=\"permissions_id\" value=\""+i+"\" />\r\n" + 
+					"  		<column name=\"app_role_id\" value=\"2\" />\r\n" + 
+					"  	</insert>";
 			for (String prefix : list) {
-				i++;
-				insert = insert + "<insert tableName=\"permission\">\r\n" + 
+				insertPermission = insertPermission + "\r\n<insert tableName=\"permission\">\r\n" + 
 						"  		<column name=\"id\" value=\""+i+"\" />\r\n" + 
 						"  		<column name=\"permission_name\" value=\""+prefix+string+"\" />\r\n" + 
 						"  		<column name=\"deleted\" valueBoolean=\"false\" />\r\n" + 
 						"  	</insert>";
+				insertRolePermissions = insertRolePermissions + "\r\n<insert tableName=\"app_role_permissions\">\r\n" + 
+						"  		<column name=\"permissions_id\" value=\""+i+"\" />\r\n" + 
+						"  		<column name=\"app_role_id\" value=\"1\" />\r\n" + 
+						"  	</insert>";
+				i++;
 			}
 			
 		}
-		String page = header+insert+footer;
+		String page = header+insertPermission+insertRolePermissions+footer;
 		copyFile(pathChangeLog+"changelog-v0.0.1.xml",pathChangeLog+"changelog-v0.0.3.xml");
 		modifyAllFile(pathChangeLog+"changelog-v0.0.3.xml", page);
 	}
