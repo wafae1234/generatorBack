@@ -1282,10 +1282,12 @@ public class GeneratorFormService {
 		for (String newClassName : newClassNames) {
 			newClassName=newClassName.replace(".java", "");
 			String oldString ="public class "+newClassName;
-			String newString ="@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class,property = \"id\")\r\n" + 
+			String newString ="@Where(clause = \"deleted = 0\")\r\n" + 
+					"@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class,property = \"id\")\r\n" + 
 					"public class "+newClassName;
 			String oldImport= "import javax.persistence.*;";
 			String newImport=oldImport+"\r\n" + 
+					"import org.hibernate.annotations.Where;\r\n"+
 					"import com.fasterxml.jackson.annotation.JsonIdentityInfo;\r\n" + 
 					"import com.fasterxml.jackson.annotation.ObjectIdGenerators;";
 			modifyFile(packagePath+newClassName+".java", oldString,newString);
@@ -2126,8 +2128,9 @@ public class GeneratorFormService {
 		
 	}
 	static void createListOfObjects(String filePath, String className,List<String> propertiesAndTypes){
-		String header = "<table class=\"table table-striped\">\r\n" + 
-				"    <tr>\r\n" + 
+		String header = "<div class=\"table-responsive\">\r\n" + 
+				"<table class=\"table table-striped table-bordered\">\r\n" + 
+				"    <tr class=\"text-center\">\r\n" + 
 				"      ";
 		String body1 = "";
 		for (String string : propertiesAndTypes) {
@@ -2139,7 +2142,7 @@ public class GeneratorFormService {
 
 		String body2 = "<th>{{'ACTIONS' | translate}}</th>\r\n" + 
 				"    </tr>\r\n" + 
-				"    <tr *ngFor=\"let "+className.toLowerCase()+" of "+className.toLowerCase()+"s\">";
+				"    <tr  class=\"text-center\" *ngFor=\"let "+className.toLowerCase()+" of "+className.toLowerCase()+"s\">";
 
 		String body3 = "";
 		for (String string : propertiesAndTypes) {
@@ -2169,10 +2172,13 @@ public class GeneratorFormService {
 
 
 		String footer = "\r\n" + 
-				"      <button class=\"btn btn-outline-success\" (click)=\"OnUpdate("+className.toLowerCase()+".id)\">Edit</button>\r\n" + 
-				"      <button class=\"btn btn-outline-danger\" (click)=\"OnDelete("+className.toLowerCase()+".id)\">Delete</button>\r\n" + 
-				"    </tr>\r\n" + 
+				"\r\n" + 
+				"      <td>"+
+				"      <button class=\"btn text-success\" (click)=\"OnUpdate("+className.toLowerCase()+".id)\"><i class=\"fa fa-pencil\"></i></button>\r\n" + 
+				"      <button class=\"btn text-danger\" (click)=\"OnDelete("+className.toLowerCase()+".id)\"><i class=\"fa fa-trash\"></i></button>\r\n" + 
+				"    </td>\n\r</tr>\r\n" + 
 				"  </table>\r\n" + 
+				"</div>\r\n" + 
 				"  <ul class=\"pagination\">\r\n" + 
 				"    <li class=\"page-item\"><a class=\"page-link\" href=\"\"(click)=\"setPrevious($event)\">Previous</a></li>\r\n" + 
 				"    <li class=\"page-item\" *ngFor=\"let p of pages; let i=index\">\r\n" + 
@@ -2207,7 +2213,7 @@ public class GeneratorFormService {
 		list.add("DELETE");
 		String insertPermission = "";
 		String insertRolePermissions="";
-		int i = 5;
+		int i = 6;
 		for (String string : newClassNames) {
 			string = string.replace(".java", "").toUpperCase();
 			insertRolePermissions = insertRolePermissions + "\r\n<insert tableName=\"app_role_permissions\">\r\n" + 
