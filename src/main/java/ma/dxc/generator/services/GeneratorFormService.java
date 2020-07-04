@@ -1673,12 +1673,23 @@ public class GeneratorFormService {
 		for (String newClassName : newClassNames) {
 			newClassName=newClassName.replace(".java", "");
 			boolean therIsSet = false;
+			List<String> listDate = new ArrayList<String>();
 			for (String string : getPropertiesAndTypes(newClassName)) {
 				String[] tab = string.split(" ");
+				if(tab[0].toLowerCase().equals("date"))
+					listDate.add(tab[1]);
 				if(tab[0].toLowerCase().equals("set")|| list.contains(tab[0])) {
 					therIsSet = true;
 					break;
+				}else {
+					for (String string2 : list) {
+						if(tab[0].toLowerCase().equals("long") && tab[1].toLowerCase().contains(string2.toLowerCase())) {
+							therIsSet = true;
+							break;
+						}
+					}
 				}
+				
 			}
 			String newDirectoryPath = frontIndex+newClassName.toLowerCase()+"s\\";
 			String oldDirectoryPath = frontIndex+"contacts\\";
@@ -1751,6 +1762,14 @@ public class GeneratorFormService {
 			else {
 				modifyFile(new_newClassNameDirectory+"new-"+newClassName.toLowerCase()+".component.ts","Contact",newClassName);
 				modifyFile(new_newClassNameDirectory+"new-"+newClassName.toLowerCase()+".component.ts","contact",newClassName.toLowerCase());
+				String newDateClose = "";
+				for (String string2 : listDate) {
+					if(!newDateClose.contains("this."+newClassName.toLowerCase()+"."+string2))
+					newDateClose = newDateClose +"\r\n"+
+							"if(this."+newClassName.toLowerCase()+"."+string2+" != null)"+
+							"this."+newClassName.toLowerCase()+"."+string2+" = this."+newClassName.toLowerCase()+"."+string2+".substring(0,10);";
+				}
+				modifyFile(new_newClassNameDirectory+"new-"+newClassName.toLowerCase()+".component.ts","HereICanAddNewDate",newDateClose);
 				
 			}
 			//creating all-newClass directory
@@ -1770,8 +1789,16 @@ public class GeneratorFormService {
 			copyFile(oldAllContactDirectoryPath+"all-contacts.component.ts",all_newClassNameDirectory+"all-"+newClassName.toLowerCase()+"s.component.ts");
 			modifyFile(all_newClassNameDirectory+"all-"+newClassName.toLowerCase()+"s.component.ts","Contact",newClassName);
 			modifyFile(all_newClassNameDirectory+"all-"+newClassName.toLowerCase()+"s.component.ts","contact",newClassName.toLowerCase());
-
-
+			String newDateClose = "";
+			for (String string2 : listDate) {
+				newDateClose = newDateClose +"\r\n"+
+						"		this."+newClassName.toLowerCase()+"s.forEach(element => {\r\n" + 
+						"			if(element."+string2+" !=null)"+
+						"          element."+string2+" = element."+string2+".substring(0,10);\r\n" + 
+						"        });";
+			}
+			modifyFile(all_newClassNameDirectory+"all-"+newClassName.toLowerCase()+"s.component.ts","HereICanAddNewDate",newDateClose);
+			
 			//creating search-newClass directory
 			String search_newClassNameDirectory = newDirectoryPath+"\\all-"+newClassName.toLowerCase()+"s\\search-"+newClassName.toLowerCase()+"\\";
 			createDirectory(search_newClassNameDirectory);
@@ -1827,8 +1854,17 @@ public class GeneratorFormService {
 				"                <form class=\"container size\"  #"+className.toLowerCase()+"Form=\"ngForm\" (ngSubmit)=\"OnSubmit()\" novalidate>";
 
 		String body = "";
+		boolean therIsForeinKey = false;
+		String classForeignKey = "";
 		for (String string : propertiesAndTypes) {
 			String[] tab = string.split(" ");
+			for (String string2 : list) {
+				if(tab[0].toLowerCase().equals("long") && tab[1].toLowerCase().contains(string2.toLowerCase())) {
+					therIsForeinKey = true;
+					classForeignKey = string2;
+					break;
+				}
+			}
 			if(!tab[1].toLowerCase().equals("id")) {
 				if(tab[0].toLowerCase().equals("date")) {
 					body = body +"\r\n" + 
@@ -1839,7 +1875,7 @@ public class GeneratorFormService {
 							"  </div>\r\n" + 
 							"";
 				}
-				else if(tab[0].toLowerCase().equals("set") || list.contains(tab[0])) {
+				else if(tab[0].toLowerCase().equals("set") || list.contains(tab[0]) || therIsForeinKey) {
 					String type = "";
 					if(tab[0].toLowerCase().equals("set")) {
 						type = tab[1].substring(0, tab[1].length() - 1);
@@ -1856,7 +1892,11 @@ public class GeneratorFormService {
 								"                        </ng-multiselect-dropdown>\r\n" + 
 								"                    </div>";
 					}else {
-						type = tab[0];
+						
+						if(therIsForeinKey) {
+							type =classForeignKey;
+							therIsForeinKey = false;
+						}else type = tab[0];
 						body = body + 
 								"                    <div class=\"form-group\">\r\n" + 
 								"                        <ng-multiselect-dropdown\r\n" + 
@@ -1901,9 +1941,15 @@ public class GeneratorFormService {
 	
 	static void createNewNewClassWithSet(String filePath, String className,List<String> propertiesAndTypes, List<String> newClassNames) {
 		List<String> list = new ArrayList<String>();
+		List<String> listDate = new ArrayList<String>();
 		for (String string : newClassNames) {
 			string = string.replace(".java", "");
 			list.add(string);
+		}
+		for (String string : propertiesAndTypes) {
+			String[] tab = string.split(" ");
+			if(tab[0].toLowerCase().equals("date"))
+				listDate.add(tab[1]);
 		}
 		String importText = "import { Component, OnInit } from '@angular/core';\r\n" + 
 				"import { IDropdownSettings } from 'ng-multiselect-dropdown';\r\n" + 
@@ -1985,7 +2031,7 @@ public class GeneratorFormService {
 				"      } else {\r\n" + 
 				"        this."+className.toLowerCase()+"service.update"+className+"(this."+className.toLowerCase()+").subscribe(data => console.log('"+className.toLowerCase()+" updated successfully'));\r\n" + 
 				"      }\r\n" + 
-				"      this.router.navigate(['/"+className.toLowerCase()+"']);\r\n" + 
+				"      this.router.navigate(['/"+className.toLowerCase()+"s']);\r\n" + 
 				"  }\r\n" + 
 				"\r\n" + 
 				"\r\n" + 
@@ -2000,37 +2046,124 @@ public class GeneratorFormService {
 		String newConstructor3 = "";
 		String newConstructor4 = "";
 		String newConstructor5 = "";
+		boolean therIsForeinKey = false;
+		String classForeignKey = "";
 		for (String string : propertiesAndTypes) {
 			String[] tab = string.split(" ");
-			if(tab[0].toLowerCase().equals("set") || list.contains(tab[0])) {
+			for (String string2 : list) {
+				if(tab[0].toLowerCase().equals("long") && tab[1].toLowerCase().contains(string2.toLowerCase())) {
+					therIsForeinKey = true;
+					classForeignKey = string2;
+					break;
+				}
+			}
+			if(tab[0].toLowerCase().equals("set") || list.contains(tab[0]) || therIsForeinKey) {
 				String type = "";
+				String data = tab[1];
 				if(tab[0].toLowerCase().equals("set")) {
 					type = tab[1].substring(0, tab[1].length() - 1);
 					type = type.substring(0, 1).toUpperCase() + type.substring(1);
 					
+				}else if(therIsForeinKey) {
+					type =classForeignKey;
 				}else {
 					type = tab[0];
-					
 				}
+				if(!newImportText.contains("import { "+type+" }"))
 				newImportText = newImportText +"\r\n"+
 								"import { "+type+" } from 'src/app/shared/model/"+type.toLowerCase()+"';\r\n" + 
 								"import { "+type+"sService } from 'src/app/main/index/"+type.toLowerCase()+"s/shared/"+type.toLowerCase()+"s.service';\r\n";
+				if(!newImportText2.contains(type+"sService"))
 				newImportText2 = newImportText2 +","+type+"sService";
-				newAttributesText = newAttributesText +"\r\n"+
+				if(!newAttributesText.contains(type.toLowerCase()+"sI: any;\r\n")) {
+					if(therIsForeinKey ) {
+						newAttributesText = newAttributesText +"\r\n"+
+								"  "+type.toLowerCase()+": any;\r\n" +
 								"  "+type.toLowerCase()+"sI: any;\r\n" + 
 								"  "+type.toLowerCase()+"s: any;\r\n" + 
 								"  "+className.toLowerCase()+type+"s:Array<"+type+">;\r\n" + 
-								"  selected"+type+"Items: Array<any> = [];";
+								"  selected"+type+"Items = [];";
+					}else if(list.contains(tab[0])) {
+						newAttributesText = newAttributesText +"\r\n"+
+								"  "+type.toLowerCase()+": any;\r\n" +
+								"  "+type.toLowerCase()+"sI: any;\r\n" + 
+								"  "+type.toLowerCase()+"s: any;\r\n" + 
+								"  "+className.toLowerCase()+type+"s = [];\r\n" + 
+								"  selected"+type+"Items = [];";
+					}else
+				newAttributesText = newAttributesText +"\r\n"+
+								"  "+type.toLowerCase()+": any;\r\n" +
+								"  "+type.toLowerCase()+"sI: any;\r\n" + 
+								"  "+type.toLowerCase()+"s: any;\r\n" + 
+								"  "+className.toLowerCase()+type+"s:Array<"+type+">;\r\n" + 
+								"  selected"+type+"Items: Array<any> = [];";}
+				if(!newConstructor.contains(type+"sService"))
 				newConstructor = newConstructor +",\r\n"+
 								"    private "+type.toLowerCase()+"sService: "+type+"sService	\r\n" ;
+				if(!newConstructor2.contains("this.getPageOf"+type+"s();"))
 				newConstructor2 = newConstructor2 + "\r\n"+
 								"this.getPageOf"+type+"s();";
+				if(!newConstructor3.contains("data['"+data+"'];")) {
+					if(therIsForeinKey ) {
+						newConstructor3 = newConstructor3 +"\r\n" + 
+								"        this."+className.toLowerCase()+type+"s = data['"+data+"'];\r\n" + 
+								"        this.selected"+type+"Items =[data['"+data+"'] ];\r\n" +
+								"      console.log('selected"+type+"Items efter click on edit: \\n' + this.selected"+type+"Items);\r\n";
+					}else if(list.contains(tab[0])) {
+						newConstructor3 = newConstructor3 +"\r\n" + 
+								"        this."+className.toLowerCase()+type+"s.push(data['"+data+"'].id);\r\n" + 
+								"        this.selected"+type+"Items =[data['"+data+"'] ];\r\n" +
+								"      console.log('selected"+type+"Items efter click on edit: \\n' + this.selected"+type+"Items);\r\n";
+					}else
 				newConstructor3 = newConstructor3 +"\r\n" + 
-						"        this."+className.toLowerCase()+type+"s = data['"+type.toLowerCase()+"s'];\r\n" + 
+						"        this."+className.toLowerCase()+type+"s = data['"+data+"'];\r\n" + 
 						"        this.selected"+type+"Items = this."+className.toLowerCase()+type+"s\r\n" + 
-						"                 .map(item => item)\r\n" + 
-						"                 .filter((thing, i, arr) => arr.findIndex(t => t.id === thing.id) === i);\r\n" + 
 						"      console.log('selected"+type+"Items efter click on edit: \\n' + this.selected"+type+"Items);";
+					for (String string2 : listDate) {
+						if(!newConstructor3.contains("this."+className.toLowerCase()+"."+string2))
+						newConstructor3 = newConstructor3 +"\r\n"+
+								"if(this."+className.toLowerCase()+"."+string2+" != null)"+
+								"this."+className.toLowerCase()+"."+string2+" = this."+className.toLowerCase()+"."+string2+".substring(0,10);";
+					}
+					}
+				if(!newConstructor4.contains("getPageOf"+type+"s()")) {
+					if(therIsForeinKey ) {
+						newConstructor4 = newConstructor4 + "\r\n" + 
+								"  getPageOf"+type+"s() {\r\n" + 
+								"    this."+type.toLowerCase()+"sService.get"+type+"s()\r\n" + 
+								"      .subscribe(data => {\r\n" + 
+								"        this."+type.toLowerCase()+"sI = data;\r\n" + 
+								"			var list = new Array(); \r\n" + 
+								"        this."+type.toLowerCase()+"sI.forEach(element => {\r\n" + 
+								"          list.push(element.id)\r\n" + 
+								"        });\r\n" + 
+								"        this."+type.toLowerCase()+"s = list\r\n"+
+							  /*"        this."+type.toLowerCase()+"s = this."+type.toLowerCase()+"sI.map(\r\n" + 
+								"          item => {return{id: item.id}})\r\n" + */
+								"        .filter((value, index, self) => self.indexOf(value) === index);\r\n" + 
+								"      }, error => {\r\n" + 
+								"        this.router.navigateByUrl('/**');\r\n" + 
+								"      });\r\n" + 
+								"  }\r\n" + 
+								"\r\n" + 
+								"  on"+type+"ItemSelect(item: any) {\r\n" + 
+								"    console.log('item : \\n' + item);\r\n" + 
+								"    console.log('electedItems : \\n' + this.selected"+type+"Items);\r\n" + 
+								"  }\r\n" + 
+								""/*+
+								"get"+type+"ById(id:any) {\r\n" + 
+								"    this."+type.toLowerCase()+"sService.get"+type+"ById(+id)\r\n" + 
+								"    .subscribe(data => {\r\n" + 
+								"      this."+type.toLowerCase()+"= data\r\n" + 
+								"      this."+className.toLowerCase()+"."+type.toLowerCase()+"s.push(this."+type.toLowerCase()+" )\r\n" + 
+								"    }, error => {\r\n" + 
+								"      this.router.navigateByUrl('/**');\r\n" + 
+								"    });\r\n" + 
+								"  }"*/;
+					}else {
+						String plural = "s";
+						if(list.contains(tab[0]))
+							plural = "";
 				newConstructor4 = newConstructor4 + "\r\n" + 
 						"  getPageOf"+type+"s() {\r\n" + 
 						"    this."+type.toLowerCase()+"sService.get"+type+"s()\r\n" + 
@@ -2048,11 +2181,36 @@ public class GeneratorFormService {
 						"    console.log('item : \\n' + item);\r\n" + 
 						"    console.log('electedItems : \\n' + this.selected"+type+"Items);\r\n" + 
 						"  }\r\n" + 
-						"";
+						""+
+						"get"+type+"ById(id:any) {\r\n" + 
+						"    this."+type.toLowerCase()+"sService.get"+type+"ById(+id)\r\n" + 
+						"    .subscribe(data => {\r\n" + 
+						"      this."+type.toLowerCase()+"= data\r\n" + 
+						"      this."+className.toLowerCase()+"."+type.toLowerCase()+plural+".push(this."+type.toLowerCase()+" )\r\n" + 
+						"    }, error => {\r\n" + 
+						"      this.router.navigateByUrl('/**');\r\n" + 
+						"    });\r\n" + 
+						"  }";
+					}
+				}
+				if(!newConstructor5.contains("this."+className.toLowerCase()+"."+type.toLowerCase()+"s"))
+					if(therIsForeinKey) {
+						newConstructor5 = newConstructor5 + "\r\n" + 
+								"      this."+className.toLowerCase()+"."+type.toLowerCase()+" = +this.selected"+type+"Items.toString();\r\n";
+							  /*"      this."+className.toLowerCase()+"."+type.toLowerCase()+"s = this.selected"+type+"Items.map(x => x);\r\n";*/
+					}else {
+						String plural = "s";
+						if(list.contains(tab[0]))
+							plural = "";
 				newConstructor5 = newConstructor5 + "\r\n" + 
-						"      this."+className.toLowerCase()+"."+type.toLowerCase()+"s = this.selected"+type+"Items.map(x => x);\r\n";
-				
-			}
+						//"      this."+className.toLowerCase()+"."+type.toLowerCase()+"s = this.selected"+type+"Items.map(x => x);\r\n";
+				"this."+className.toLowerCase()+"."+type.toLowerCase()+plural+" = []\r\n" + 
+				"      this.selected"+type+"Items.map(\r\n" + 
+				"        item => { if(Number(item)){this.get"+type+"ById(item)}else\r\n" + 
+				"        this.get"+type+"ById(item.id)})\r\n";
+			}}
+
+			therIsForeinKey = false;
 		}
 		
 		String page = newImportText+importText+newImportText2+importText2+newAttributesText+constructor+newConstructor
@@ -2113,9 +2271,16 @@ public class GeneratorFormService {
 				"";
 		String page = "";
 		boolean therIsSet = false;
+		boolean therIsForeinKey = false;
 		for (String string : propertiesAndTypes) {
 			String[] tab = string.split(" ");
-			if(tab[0].toLowerCase().equals("set") || list.contains(tab[0])) {
+			for (String string2 : list) {
+				if(tab[0].toLowerCase().equals("long") && tab[1].toLowerCase().contains(string2.toLowerCase())) {
+					therIsForeinKey = true;
+					break;
+				}
+			}
+			if(tab[0].toLowerCase().equals("set") || list.contains(tab[0]) || therIsForeinKey) {
 				therIsSet = true;
 				break;
 			}
