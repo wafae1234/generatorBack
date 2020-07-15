@@ -9,6 +9,9 @@ import javax.persistence.*;
 @Entity
 @Table(name="client")
 public class Client {
+	@Basic
+	private boolean deleted;
+
 	@Id
 	private long id;
 
@@ -26,6 +29,14 @@ public class Client {
 
 	public Client(long id) {
 		this.id = id;
+	}
+
+	public boolean isDeleted() {
+		return deleted;
+	}
+
+	public void setDeleted(boolean deleted) {
+		this.deleted = deleted;
 	}
 
 	public long getId() {

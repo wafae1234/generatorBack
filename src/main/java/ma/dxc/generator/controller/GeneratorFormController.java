@@ -1,12 +1,17 @@
 package ma.dxc.generator.controller;
 
 
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import ma.dxc.generator.model.GeneratorForm;
@@ -21,12 +26,11 @@ public class GeneratorFormController {
 	private GeneratorFormService sf;
 	
 	@PostMapping(value="/form")
-	public String recuperer(@RequestBody Map<String,String> body )
+	public List<String> recuperer(@RequestBody Map<String,String> body )
 	{
 		GeneratorForm f = new GeneratorForm();
-		
 		f.setDiroctoryproject(body.get("diroctoryproject"));
-		f.setNomprojet(body.get("nomprjet"));
+		f.setNomprojet(body.get("nomprojet"));
 		f.setNompackage(body.get("nompackage"));
 		f.setTypebasededonne(body.get("typebasededonne"));
 		f.setLienserveur(body.get("lienserveur"));
@@ -36,9 +40,21 @@ public class GeneratorFormController {
 		f.setMotdepasseutilisateur(body.get("motdepasse"));
 		sf.generate(f);
 		
-		//System.out.println(body.get("nomprjet").toString());
-		return "okeeeeeeeeee";
-	
+		return sf.tables(f);
 	}
 	
+	
+	
+	
+	@GetMapping(value="/properties")
+	public List<String> getProperties(@RequestParam(name="tableName",defaultValue = "")String tableName,
+			                       @RequestParam(name="directory",defaultValue = "")String directory){
+		return sf.propertiesAndTypes(tableName,directory);
+	}
+	
+/*	@PutMapping(value="/properties/{table}")
+	public List<String> savePropertiesChanges(@RequestBody List<String> properties){
+		return sf.propertiesAndTypes(table);
+	}
+	*/
 }

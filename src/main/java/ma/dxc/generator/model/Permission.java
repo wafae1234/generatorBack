@@ -1,6 +1,5 @@
 package ma.dxc.generator.model;
 
-import java.util.*;
 import javax.persistence.*;
 
 /**
@@ -8,12 +7,8 @@ import javax.persistence.*;
  * org.apache.openjpa.jdbc.meta.ReverseMappingTool$AnnotatedCodeGenerator
  */
 @Entity
-@Table(name="commande")
-public class Commande {
-	@Basic
-	@Temporal(TemporalType.DATE)
-	private Date datecom;
-
+@Table(name="permission")
+public class Permission {
 	@Basic
 	private boolean deleted;
 
@@ -21,22 +16,15 @@ public class Commande {
 	private long id;
 
 	@Basic
-	private Long idcli;
+	@Column(name="permission_name")
+	private String permissionName;
 
 
-	public Commande() {
+	public Permission() {
 	}
 
-	public Commande(long id) {
+	public Permission(long id) {
 		this.id = id;
-	}
-
-	public Date getDatecom() {
-		return datecom;
-	}
-
-	public void setDatecom(Date datecom) {
-		this.datecom = datecom;
 	}
 
 	public boolean isDeleted() {
@@ -55,11 +43,11 @@ public class Commande {
 		this.id = id;
 	}
 
-	public Long getIdcli() {
-		return idcli;
+	public String getPermissionName() {
+		return permissionName;
 	}
 
-	public void setIdcli(Long idcli) {
-		this.idcli = idcli;
+	public void setPermissionName(String permissionName) {
+		this.permissionName = permissionName;
 	}
 }

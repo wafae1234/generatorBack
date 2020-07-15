@@ -35,20 +35,51 @@ import ma.dxc.generator.model.GeneratorForm;
 
 @Service
 public class GeneratorFormService {
+	
+	//private final GeneratorForm f = new GeneratorForm();
+	
+	
+	
+	
+	public List<String> tables(GeneratorForm f) { 		
+		String NewProjectName = f.getNomprojet();
+		String newPackage = f.getNompackage();
+		String newPackagePath = newPackage.replace(".","\\")+"\\";
+		String directory = f.getDiroctoryproject() + "\\" + NewProjectName;
+		String directoryBack = directory + "\\backend";
+		String orginPathProjectMain = directoryBack + BaseConstants.MAIN_SRC_DIR;
+		String newPathProject = orginPathProjectMain + newPackagePath;
+		String modelPackage = newPathProject+"model\\";
+		List<String> listOfTables = new ArrayList<String>();
+		List<String> classs = ListNameOfFilesinDirectory(modelPackage);
+					for (String string : classs) {	
+						listOfTables.add(string.replace(".java", ""));
+                     }
+		
+	return listOfTables;
+	}
 
+	
+	public List<String> propertiesAndTypes(String tableName, String directory){
+		String directoryBack = directory + "\\backend";
+		String orginPathProjectMain = directoryBack + BaseConstants.MAIN_SRC_DIR;
+		String originModel = orginPathProjectMain+"model\\";
+	return getPropertiesAndTypes(originModel + tableName + ".java");
+	}
+
+	
+	
 	public void generate(GeneratorForm f) {
 
+		String NewProjectName = f.getNomprojet();
 
 		String newPackage = f.getNompackage();
 		String newPackagePath = newPackage.replace(".","\\")+"\\";
 		
-		String directory = f.getDiroctoryproject();
+		String directory = f.getDiroctoryproject() + "\\" + NewProjectName;
 		String directoryBack = directory + "\\backend";
 		
-
 		String newTestPackagePath = newPackagePath + "\\test\\";
-
-		String NewProjectName = f.getNomprojet();
 
 		String orginPathProjectMain = directoryBack + BaseConstants.MAIN_SRC_DIR;
 
@@ -122,8 +153,8 @@ public class GeneratorFormService {
 		String frontSideBar = directoryFront+BaseConstants.FRONT_SIDE_BAR;
 
 		String frontIndex = directoryFront+BaseConstants.FRONT_INDEX;
-
-
+		
+		
 		////////////////////////////////////// pull framework /////////////////////////////////////////////
 
 		String host = f.getLienserveur(); 
